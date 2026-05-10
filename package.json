@@ -1,0 +1,29 @@
+{
+  "name": "adhyayan-learning-system",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "npm@11.12.1",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "start": "npm run dev:npm",
+    "dev": "npm run dev:npm",
+    "dev:backend": "pnpm --filter adhyayan-backend dev",
+    "dev:frontend": "pnpm --filter adhyayan-frontend dev",
+    "dev:pnpm": "concurrently \"pnpm dev:backend\" \"pnpm dev:frontend\"",
+    "build": "npm run build:npm",
+    "build:pnpm": "pnpm --filter adhyayan-backend build && pnpm --filter adhyayan-frontend build",
+    "test": "npm run test:npm",
+    "test:pnpm": "pnpm --filter adhyayan-backend test",
+    "dev:npm": "concurrently \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
+    "build:npm": "npm run build --workspace backend && npm run build --workspace frontend",
+    "test:npm": "npm run test --workspace backend",
+    "start:backend:npm": "npm run start --workspace backend",
+    "start:frontend:npm": "npm run start --workspace frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
