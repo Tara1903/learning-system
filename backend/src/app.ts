@@ -1,7 +1,7 @@
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import express from "express";
-import helmet from "helmet";
+import helmetPkg from "helmet";
 
 import { ensureRuntimeReady } from "./bootstrap/runtime.js";
 import { isDatabaseReady } from "./config/db.js";
@@ -18,7 +18,7 @@ export const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", env.trustedProxy);
 app.use(requestContextMiddleware);
-// @ts-ignore - Vercel strict TS check doesn't see helmet's call signature
+const helmet = (helmetPkg as any).default || helmetPkg;
 app.use(
   helmet({
     crossOriginResourcePolicy: false
