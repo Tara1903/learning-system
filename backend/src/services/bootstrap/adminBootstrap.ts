@@ -1,20 +1,20 @@
 import bcrypt from "bcryptjs";
 
 import { env } from "../../config/env.js";
-import { UserModel } from "../../models/User.js";
+import { supabase } from "../../config/db.js";
 
 export async function ensureSeedAdmin(): Promise<void> {
   if (!env.enableSeedAdminBootstrap) {
     return;
   }
 
-  const existingAdmin = await UserModel.findOne({ role: "admin" });
+  const { data: existingAdmin } = await supabase.from("users").select("id").eq("role", "admin").limit(1).maybeSingle();
 
   if (existingAdmin) {
     return;
   }
 
-  const existingSeedUser = await UserModel.findOne({ email: env.seedAdminEmail.toLowerCase() });
+  const { data: existingSeedUser } = await supabase.from("users").select("id").eq("email", env.seedAdminEmail.toLowerCase()).limit(1).maybeSingle();
 
   if (existingSeedUser) {
     throw new Error(
@@ -24,7 +24,7 @@ export async function ensureSeedAdmin(): Promise<void> {
 
   const password = await bcrypt.hash(env.seedAdminPassword, 10);
 
-  await UserModel.create({
+  await supabase.from("users").insert({
     name: env.seedAdminName,
     email: env.seedAdminEmail,
     password,

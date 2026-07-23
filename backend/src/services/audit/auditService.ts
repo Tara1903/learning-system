@@ -1,6 +1,6 @@
 import type { Request } from "express";
 
-import { AuditLogModel } from "../../models/AuditLog.js";
+import { supabase } from '../../config/db.js';
 
 interface AuditLogInput {
   actorId?: string;
@@ -16,7 +16,8 @@ interface AuditLogInput {
 }
 
 export async function recordAuditEvent(input: AuditLogInput): Promise<void> {
-  await AuditLogModel.create(input);
+  const { error } = await supabase.from('audit_logs').insert(input);
+  if (error) console.error("Failed to record audit event:", error);
 }
 
 export async function recordAuditEventFromRequest(

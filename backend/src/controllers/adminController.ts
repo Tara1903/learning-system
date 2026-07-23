@@ -1,13 +1,19 @@
 import type { Request, Response } from "express";
 
-import type { UserProfile } from "../models/User.js";
-import { UserModel } from "../models/User.js";
+import { supabase } from "../config/db.js";
 import { getStudentAnalytics, buildInstituteAnalytics } from "../services/analytics/analyticsService.js";
 import { recordAuditEventFromRequest } from "../services/audit/auditService.js";
 import { createNotification } from "../services/notification/notificationService.js";
 import { settleNonCriticalTasks } from "../services/ops/sideEffects.js";
 import { createInviteForUser, hashPlaceholderPassword } from "./authController.js";
 import { ApiError, ok } from "../utils/http.js";
+
+export interface UserProfile {
+  phone?: string;
+  section?: string;
+  admissionNumber?: string;
+  guardianName?: string;
+}
 
 interface AdminUserListQuery {
   page?: number;
@@ -85,9 +91,9 @@ function extractLinkedStudents(user: any) {
         return null;
       }
 
-      if (typeof item === "object" && item._id) {
+      if (typeof item === "object" && item.id) {
         return {
-          id: String(item._id),
+          id: String(item.id),
           name: item.name ?? "Student",
           class: item.class
         };
@@ -109,11 +115,11 @@ function serializeManagedUser(user: any, analytics?: unknown) {
     linkedStudents.length > 0
       ? linkedStudents.map((student) => student.id)
       : Array.isArray(user.linkedStudentIds)
-        ? user.linkedStudentIds.map((item: any) => String(item?._id ?? item))
+        ? user.linkedStudentIds.map((item: any) => String(item?.id ?? item))
         : [];
 
   return {
-    id: String(user._id),
+    id: String(user.id),
     name: user.name,
     email: user.email,
     role: user.role,
@@ -142,23 +148,13 @@ function buildPagination(page: number, pageSize: number, total: number): Paginat
   };
 }
 
-function buildSearchFilter(search?: string) {
-  if (!search?.trim()) {
-    return {};
+async function ensureUniqueEmail(email: string, excludeUserId?: string): Promise<void> {
+  let query = supabase.from("users").select("id").eq("email", email);
+  if (excludeUserId) {
+    query = query.neq("id", excludeUserId);
   }
 
-  const pattern = new RegExp(escapeRegex(search.trim()), "i");
-
-  return {
-    $or: [{ name: pattern }, { email: pattern }, { class: pattern }]
-  };
-}
-
-async function ensureUniqueEmail(email: string, excludeUserId?: string): Promise<void> {
-  const existingUser = await UserModel.findOne({
-    email,
-    ...(excludeUserId ? { _id: { $ne: excludeUserId } } : {})
-  }).select("_id");
+  const { data: existingUser } = await query.maybeSingle();
 
   if (existingUser) {
     throw new ApiError(409, "An account with this email already exists.");
@@ -170,12 +166,9 @@ async function validateLinkedStudents(linkedStudentIds: string[]): Promise<strin
     throw new ApiError(400, "Parent must be linked to at least one student.");
   }
 
-  const students = await UserModel.find({
-    _id: { $in: linkedStudentIds },
-    role: "student"
-  }).select("_id");
+  const { data: students } = await supabase.from("users").select("id").in("id", linkedStudentIds).eq("role", "student");
 
-  if (students.length !== linkedStudentIds.length) {
+  if (!students || students.length !== linkedStudentIds.length) {
     throw new ApiError(400, "Parents can only be linked to existing student accounts.");
   }
 
@@ -188,48 +181,52 @@ async function buildManagedUsersPage(
   pageSize: number
 ): Promise<{ items: ReturnType<typeof serializeManagedUser>[]; pagination: PaginationState }> {
   const skip = (page - 1) * pageSize;
-  const [total, users] = await Promise.all([
-    UserModel.countDocuments(filter),
-    UserModel.find(filter)
-      .select("-password")
-      .populate("linkedStudentId", "name class")
-      .populate("linkedStudentIds", "name class")
-      .sort({ role: 1, class: 1, name: 1 })
-      .skip(skip)
-      .limit(pageSize)
-      .lean()
-  ]);
+  
+  let query = supabase.from("users").select("*", { count: "exact" });
+  if (filter.role) {
+    query = query.eq("role", filter.role);
+  }
+  if (filter.search) {
+    query = query.or(`name.ilike.%${filter.search}%,email.ilike.%${filter.search}%,class.ilike.%${filter.search}%`);
+  }
+  
+  const { data: users, count: total } = await query
+    .order("role", { ascending: true })
+    .order("class", { ascending: true })
+    .order("name", { ascending: true })
+    .range(skip, skip + pageSize - 1);
 
-  const hydratedUsers = users as any[];
+  const hydratedUsers = users || [];
   const studentAnalytics = new Map(
     await Promise.all(
       hydratedUsers
         .filter((user) => user.role === "student")
-        .map(async (student) => [String(student._id), await getStudentAnalytics(String(student._id))] as const)
+        .map(async (student) => [String(student.id), await getStudentAnalytics(String(student.id))] as const)
     )
   );
 
   return {
     items: hydratedUsers.map((user) =>
-      serializeManagedUser(user, user.role === "student" ? studentAnalytics.get(String(user._id)) : undefined)
+      serializeManagedUser(user, user.role === "student" ? studentAnalytics.get(String(user.id)) : undefined)
     ),
-    pagination: buildPagination(page, pageSize, total)
+    pagination: buildPagination(page, pageSize, total || 0)
   };
 }
 
 async function assertAdminStatusChangeAllowed(userId: string, nextIsActive: boolean) {
-  const user = await UserModel.findById(userId);
+  const { data: user } = await supabase.from("users").select("*").eq("id", userId).maybeSingle();
 
   if (!user) {
     throw new ApiError(404, "User not found.");
   }
 
   if (user.role === "admin" && user.isActive && !nextIsActive) {
-    const activeAdminCount = await UserModel.countDocuments({
-      role: "admin",
-      isActive: true,
-      _id: { $ne: userId }
-    });
+    const { count: activeAdminCount } = await supabase
+      .from("users")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "admin")
+      .eq("isActive", true)
+      .neq("id", userId);
 
     if (activeAdminCount === 0) {
       throw new ApiError(400, "At least one active admin must remain.");
@@ -257,26 +254,34 @@ async function createManagedUser(req: Request, res: Response, role: "student" | 
       ? await validateLinkedStudents(normalizeLinkedStudentIds(req.body.linkedStudentId, req.body.linkedStudentIds))
       : [];
 
-  const user = await UserModel.create({
+  const password = await hashPlaceholderPassword();
+
+  const { data: userArray } = await supabase.from("users").insert({
     name,
     email,
-    password: await hashPlaceholderPassword(),
+    password,
     role,
-    class: role === "student" ? classLevel : undefined,
+    class: role === "student" ? classLevel : null,
     createdBy: req.user?.id,
-    linkedStudentId: linkedStudentIds[0],
+    linkedStudentId: linkedStudentIds[0] || null,
     linkedStudentIds,
     profile,
     isActive
-  });
+  }).select();
 
-  const invite = await createInviteForUser(String(user._id), req.user?.id ?? String(user._id));
+  const user = userArray?.[0];
+
+  if (!user) {
+    throw new ApiError(500, "Failed to create user.");
+  }
+
+  const invite = await createInviteForUser(String(user.id), req.user?.id ?? String(user.id));
 
   await settleNonCriticalTasks(
     "admin-create-user",
     [
       createNotification({
-        recipientId: String(user._id),
+        recipientId: String(user.id),
         type: "account-created",
         title: "Welcome to Adhyayan",
         message: "Your institutional account is ready. Complete password setup using your invite link."
@@ -284,8 +289,8 @@ async function createManagedUser(req: Request, res: Response, role: "student" | 
       recordAuditEventFromRequest(req, {
         action: `admin.${role}.created`,
         entityType: "user",
-        entityId: String(user._id),
-        targetUserId: String(user._id),
+        entityId: String(user.id),
+        targetUserId: String(user.id),
         details: {
           role,
           isActive,
@@ -294,7 +299,7 @@ async function createManagedUser(req: Request, res: Response, role: "student" | 
       })
     ],
     {
-      targetUserId: String(user._id),
+      targetUserId: String(user.id),
       role
     }
   );
@@ -302,7 +307,7 @@ async function createManagedUser(req: Request, res: Response, role: "student" | 
   ok(
     res,
     {
-      user: serializeManagedUser(user.toObject()),
+      user: serializeManagedUser(user),
       ...invite
     },
     `${role} created successfully.`,
@@ -327,7 +332,7 @@ export async function getStudents(req: Request, res: Response): Promise<void> {
   const { items, pagination } = await buildManagedUsersPage(
     {
       role: "student",
-      ...buildSearchFilter(search)
+      search: search?.trim() || ""
     },
     page,
     pageSize
@@ -347,7 +352,7 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
   const { page = 1, pageSize = 20, role, search } = req.query as unknown as AdminUserListQuery;
   const filter = {
     ...(role ? { role } : {}),
-    ...buildSearchFilter(search)
+    search: search?.trim() || ""
   };
   const { items, pagination } = await buildManagedUsersPage(filter, page, pageSize);
 
@@ -362,11 +367,7 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
 }
 
 export async function updateUser(req: Request, res: Response): Promise<void> {
-  const user = await UserModel.findById(req.params.id);
-
-  if (!user) {
-    throw new ApiError(404, "User not found.");
-  }
+  let user = await assertAdminStatusChangeAllowed(req.params.id as string, typeof req.body.isActive === "boolean" ? req.body.isActive : true);
 
   const name = normalizeRequiredText(req.body.name ?? user.name, "Name");
   const email = normalizeRequiredText(req.body.email ?? user.email, "Email").toLowerCase();
@@ -374,19 +375,17 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
   const classLevel = normalizeOptionalText(req.body.class ?? user.class);
   const nextIsActive = typeof req.body.isActive === "boolean" ? req.body.isActive : user.isActive;
 
-  await ensureUniqueEmail(email, String(user._id));
+  await ensureUniqueEmail(email, String(user.id));
 
   if (user.role === "student" && !classLevel) {
     throw new ApiError(400, "Student class is required.");
   }
 
-  await assertAdminStatusChangeAllowed(String(user._id), nextIsActive);
-
   const hasLinkedStudentInput =
     req.body.linkedStudentId !== undefined || req.body.linkedStudentIds !== undefined;
   const currentLinkedStudentIds = [
     ...(user.linkedStudentId ? [String(user.linkedStudentId)] : []),
-    ...user.linkedStudentIds.map((item: { toString(): string }) => String(item))
+    ...(user.linkedStudentIds || []).map((item: { toString(): string }) => String(item))
   ];
   const linkedStudentIds =
     user.role === "parent"
@@ -401,17 +400,26 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
   user.email = email;
   user.isActive = nextIsActive;
   user.profile = profile;
-  user.class = user.role === "student" ? classLevel : undefined;
-  user.linkedStudentId = linkedStudentIds[0] as any;
-  user.linkedStudentIds = linkedStudentIds as any;
+  user.class = user.role === "student" ? classLevel : null;
+  user.linkedStudentId = linkedStudentIds[0] || null;
+  user.linkedStudentIds = linkedStudentIds || [];
 
   if (activationChanged) {
-    user.tokenVersion += 1;
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
   }
 
-  await user.save();
-  await user.populate("linkedStudentId", "name class");
-  await user.populate("linkedStudentIds", "name class");
+  const { data: updatedUsers } = await supabase.from("users").update({
+    name: user.name,
+    email: user.email,
+    isActive: user.isActive,
+    profile: user.profile,
+    class: user.class,
+    linkedStudentId: user.linkedStudentId,
+    linkedStudentIds: user.linkedStudentIds,
+    tokenVersion: user.tokenVersion
+  }).eq("id", user.id).select();
+  
+  user = updatedUsers?.[0] || user;
 
   await settleNonCriticalTasks(
     "admin-update-user",
@@ -419,7 +427,7 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
       ...(activationChanged
         ? [
             createNotification({
-              recipientId: String(user._id),
+              recipientId: String(user.id),
               type: "account-status-updated",
               title: user.isActive ? "Account reactivated" : "Account paused",
               message: user.isActive
@@ -431,8 +439,8 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
       recordAuditEventFromRequest(req, {
         action: "admin.user.updated",
         entityType: "user",
-        entityId: String(user._id),
-        targetUserId: String(user._id),
+        entityId: String(user.id),
+        targetUserId: String(user.id),
         details: {
           isActive: user.isActive,
           activationChanged,
@@ -441,11 +449,11 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
       })
     ],
     {
-      targetUserId: String(user._id)
+      targetUserId: String(user.id)
     }
   );
 
-  ok(res, { user: serializeManagedUser(user.toObject()) }, "User updated successfully.");
+  ok(res, { user: serializeManagedUser(user) }, "User updated successfully.");
 }
 
 export async function updateUserStatus(req: Request, res: Response): Promise<void> {
@@ -455,16 +463,22 @@ export async function updateUserStatus(req: Request, res: Response): Promise<voi
     throw new ApiError(400, "User id is required.");
   }
 
-  const user = await assertAdminStatusChangeAllowed(userId, req.body.isActive);
+  let user = await assertAdminStatusChangeAllowed(userId, req.body.isActive);
   user.isActive = req.body.isActive;
-  user.tokenVersion += 1;
-  await user.save();
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  
+  const { data: updatedUsers } = await supabase.from("users").update({
+    isActive: user.isActive,
+    tokenVersion: user.tokenVersion
+  }).eq("id", user.id).select();
+  
+  user = updatedUsers?.[0] || user;
 
   await settleNonCriticalTasks(
     "admin-update-user-status",
     [
       createNotification({
-        recipientId: String(user._id),
+        recipientId: String(user.id),
         type: "account-status-updated",
         title: user.isActive ? "Account reactivated" : "Account paused",
         message: user.isActive
@@ -474,21 +488,21 @@ export async function updateUserStatus(req: Request, res: Response): Promise<voi
       recordAuditEventFromRequest(req, {
         action: user.isActive ? "admin.user.activated" : "admin.user.deactivated",
         entityType: "user",
-        entityId: String(user._id),
-        targetUserId: String(user._id),
+        entityId: String(user.id),
+        targetUserId: String(user.id),
         details: {
           isActive: user.isActive
         }
       })
     ],
     {
-      targetUserId: String(user._id)
+      targetUserId: String(user.id)
     }
   );
 
   ok(
     res,
-    { user: serializeManagedUser(user.toObject()) },
+    { user: serializeManagedUser(user) },
     user.isActive ? "User activated successfully." : "User deactivated successfully."
   );
 }

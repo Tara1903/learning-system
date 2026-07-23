@@ -1,9 +1,12 @@
 import type { Request, Response } from "express";
 
-import type { DoubtMessage } from "../models/Doubt.js";
-import { DoubtModel } from "../models/Doubt.js";
-import { UploadAssetModel } from "../models/UploadAsset.js";
-import { UserModel } from "../models/User.js";
+import { supabase } from "../config/db.js";
+export interface DoubtMessage {
+  role: string;
+  content: string;
+  mode?: string;
+  createdAt?: Date | string;
+}
 import { recalculateStudentAnalytics } from "../services/analytics/analyticsService.js";
 import { recordAuditEventFromRequest } from "../services/audit/auditService.js";
 import { logger } from "../services/ops/logger.js";
@@ -45,17 +48,21 @@ export async function askDoubt(req: Request, res: Response): Promise<void> {
     throw new ApiError(400, "question, studentClass, subject, and mode are required.");
   }
 
-  const student = await UserModel.findById(studentId);
+  const { data: student } = await supabase.from('users').select('*').eq('id', studentId).single();
   if (!student) {
     throw new ApiError(404, "Student not found.");
   }
 
-  const attachmentAsset = attachmentAssetId ? await UploadAssetModel.findById(attachmentAssetId) : null;
+  let attachmentAsset: any = null;
+  if (attachmentAssetId) {
+    const { data } = await supabase.from('upload_assets').select('*').eq('id', attachmentAssetId).single();
+    attachmentAsset = data;
+  }
   if (attachmentAsset && req.user) {
     await assertUserCanAccessUpload(req.user, attachmentAsset);
   }
 
-  const attachmentDownloadUrl = attachmentAsset ? buildUploadDownloadUrl(String(attachmentAsset._id)) : attachmentUrl;
+  const attachmentDownloadUrl = attachmentAsset ? buildUploadDownloadUrl(attachmentAsset.id) : attachmentUrl;
   let aiAttachment: { bytes: Buffer; mimeType: string; fileName: string } | undefined;
 
   if (attachmentAsset?.category === "images") {
@@ -74,9 +81,13 @@ export async function askDoubt(req: Request, res: Response): Promise<void> {
     }
   }
 
-  let thread = threadId ? await DoubtModel.findOne({ _id: threadId, studentId }) : null;
+  let thread: any = null;
+  if (threadId) {
+    const { data } = await supabase.from('doubts').select('*').eq('id', threadId).eq('student_id', studentId).single();
+    thread = data;
+  }
   const previousMessages =
-    thread?.messages.slice(-4).map((message: DoubtMessage) => `${message.role}: ${message.content}`) ?? [];
+    (thread?.messages || []).slice(-4).map((message: DoubtMessage) => `${message.role}: ${message.content}`) ?? [];
 
   const guidance = await generateTeacherGuidance({
     question,
@@ -90,8 +101,8 @@ export async function askDoubt(req: Request, res: Response): Promise<void> {
   });
 
   if (!thread) {
-    thread = await DoubtModel.create({
-      studentId,
+    const { data } = await supabase.from('doubts').insert({
+      student_id: studentId,
       question,
       subject,
       class: studentClass,
@@ -101,10 +112,10 @@ export async function askDoubt(req: Request, res: Response): Promise<void> {
         attachmentAsset && attachmentDownloadUrl
           ? [
               {
-                type: inferAttachmentType(attachmentAsset.mimeType),
+                type: inferAttachmentType(attachmentAsset.mime_type || attachmentAsset.mimeType),
                 url: attachmentDownloadUrl,
-                fileName: attachmentAsset.originalFileName || attachmentAsset.fileName,
-                assetId: attachmentAsset._id
+                fileName: attachmentAsset.original_file_name || attachmentAsset.originalFileName || attachmentAsset.file_name || attachmentAsset.fileName,
+                assetId: attachmentAsset.id
               }
             ]
           : attachmentUrl
@@ -116,64 +127,80 @@ export async function askDoubt(req: Request, res: Response): Promise<void> {
                 }
               ]
             : [],
-      voiceTranscript,
-      weakTopicTags: guidance.weakTopicTags,
+      voice_transcript: voiceTranscript,
+      weak_topic_tags: guidance.weakTopicTags,
       messages: [
         {
           role: "student",
           content: voiceTranscript ? `${question}\nVoice transcript: ${voiceTranscript}` : question,
           mode,
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         },
         {
           role: "assistant",
           content: guidance.reply,
           mode,
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         }
       ],
-      resolvedAt: mode === "reveal-answer" ? new Date() : undefined
-    });
+      resolved_at: mode === "reveal-answer" ? new Date().toISOString() : null
+    }).select().single();
+    thread = data;
   } else {
     thread.question = question;
     thread.subject = subject;
     thread.class = studentClass;
     thread.response = guidance.reply;
     thread.mode = mode;
-    thread.voiceTranscript = voiceTranscript ?? thread.voiceTranscript;
-    thread.weakTopicTags = Array.from(new Set([...thread.weakTopicTags, ...guidance.weakTopicTags]));
+    thread.voice_transcript = voiceTranscript ?? thread.voice_transcript ?? thread.voiceTranscript;
+    thread.weak_topic_tags = Array.from(new Set([...(thread.weak_topic_tags || thread.weakTopicTags || []), ...guidance.weakTopicTags]));
     if (attachmentAsset && attachmentDownloadUrl) {
+      if (!thread.attachments) thread.attachments = [];
       thread.attachments.push({
-        type: inferAttachmentType(attachmentAsset.mimeType),
+        type: inferAttachmentType(attachmentAsset.mime_type || attachmentAsset.mimeType),
         url: attachmentDownloadUrl,
-        fileName: attachmentAsset.originalFileName || attachmentAsset.fileName,
-        assetId: attachmentAsset._id
+        fileName: attachmentAsset.original_file_name || attachmentAsset.originalFileName || attachmentAsset.file_name || attachmentAsset.fileName,
+        assetId: attachmentAsset.id
       });
     } else if (attachmentUrl) {
+      if (!thread.attachments) thread.attachments = [];
       thread.attachments.push({
         type: "image",
         url: attachmentUrl,
         fileName: attachmentUrl.split("/").pop() ?? "attachment"
       });
     }
+    if (!thread.messages) thread.messages = [];
     thread.messages.push(
       {
         role: "student",
         content: voiceTranscript ? `${question}\nVoice transcript: ${voiceTranscript}` : question,
         mode,
-        createdAt: new Date()
+        createdAt: new Date().toISOString()
       },
       {
         role: "assistant",
         content: guidance.reply,
         mode,
-        createdAt: new Date()
+        createdAt: new Date().toISOString()
       }
     );
     if (mode === "reveal-answer") {
-      thread.resolvedAt = new Date();
+      thread.resolved_at = new Date().toISOString();
     }
-    await thread.save();
+    const { data } = await supabase.from('doubts').update({
+      question: thread.question,
+      subject: thread.subject,
+      class: thread.class,
+      response: thread.response,
+      mode: thread.mode,
+      voice_transcript: thread.voice_transcript,
+      weak_topic_tags: thread.weak_topic_tags,
+      attachments: thread.attachments,
+      messages: thread.messages,
+      resolved_at: thread.resolved_at
+    }).eq('id', thread.id).select().single();
+    thread = data;
   }
 
   await settleNonCriticalTasks(
@@ -186,19 +213,19 @@ export async function askDoubt(req: Request, res: Response): Promise<void> {
         title: "AI doubt guidance ready",
         message: `Your ${subject} doubt now has guided teaching support.`,
         relatedEntityType: "doubt",
-        relatedEntityId: String(thread._id)
+        relatedEntityId: thread.id
       }),
       notifyLinkedParents(
         studentId,
         "Student used AI teacher",
         `${student.name} used the AI teacher for ${subject}.`,
         "doubt",
-        String(thread._id)
+        thread.id
       ),
       recordAuditEventFromRequest(req, {
         action: "student.doubt.asked",
         entityType: "doubt",
-        entityId: String(thread._id),
+        entityId: thread.id,
         targetUserId: studentId,
         details: {
           subject,
@@ -209,14 +236,14 @@ export async function askDoubt(req: Request, res: Response): Promise<void> {
     ],
     {
       studentId,
-      doubtId: String(thread._id)
+      doubtId: thread.id
     }
   );
 
   ok(
     res,
     {
-      threadId: String(thread._id),
+      threadId: thread.id,
       guidedReply: guidance.reply,
       followUpPrompt: guidance.followUpPrompt,
       suggestedActions: guidance.suggestedActions,

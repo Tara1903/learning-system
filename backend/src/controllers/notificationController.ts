@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 
-import { NotificationModel } from "../models/Notification.js";
+import { supabase } from '../config/db.js';
 import { ok, ApiError } from "../utils/http.js";
 
 export async function getNotifications(req: Request, res: Response): Promise<void> {
@@ -14,13 +14,21 @@ export async function getNotifications(req: Request, res: Response): Promise<voi
   const pageSize = Math.min(50, Math.max(1, Number(req.query.pageSize ?? 20)));
   const skip = (page - 1) * pageSize;
 
-  const [total, unreadCount, notifications] = await Promise.all([
-    NotificationModel.countDocuments({ recipientId }),
-    NotificationModel.countDocuments({ recipientId, read: false }),
-    NotificationModel.find({ recipientId }).sort({ createdAt: -1 }).skip(skip).limit(pageSize)
+  const [
+    { count: total, error: totalError },
+    { count: unreadCount, error: unreadError },
+    { data: notifications, error: notificationsError }
+  ] = await Promise.all([
+    supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('recipientId', recipientId),
+    supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('recipientId', recipientId).eq('read', false),
+    supabase.from('notifications').select('*').eq('recipientId', recipientId).order('createdAt', { ascending: false }).range(skip, skip + pageSize - 1)
   ]);
 
-  const totalPages = total > 0 ? Math.ceil(total / pageSize) : 0;
+  if (totalError) throw new ApiError(500, "Database error: " + totalError.message);
+  if (unreadError) throw new ApiError(500, "Database error: " + unreadError.message);
+  if (notificationsError) throw new ApiError(500, "Database error: " + notificationsError.message);
+
+  const totalPages = (total ?? 0) > 0 ? Math.ceil((total ?? 0) / pageSize) : 0;
 
   ok(res, {
     notifications,
@@ -37,14 +45,19 @@ export async function getNotifications(req: Request, res: Response): Promise<voi
 }
 
 export async function markNotificationRead(req: Request, res: Response): Promise<void> {
-  const notification = await NotificationModel.findOneAndUpdate(
-    { _id: req.params.id, recipientId: req.user?.id },
-    { read: true },
-    { new: true }
-  );
+  const { data: notification, error } = await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('id', req.params.id)
+    .eq('recipientId', req.user?.id)
+    .select()
+    .single();
 
-  if (!notification) {
-    throw new ApiError(404, "Notification not found.");
+  if (error) {
+    if (error.code === 'PGRST116') {
+      throw new ApiError(404, "Notification not found.");
+    }
+    throw new ApiError(500, "Database error: " + error.message);
   }
 
   ok(res, { notification }, "Notification marked as read.");

@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
 import { env } from "../config/env.js";
-import { UploadAssetModel } from "../models/UploadAsset.js";
+import { supabase } from '../config/db.js';
 import { transcribeStudentVoiceNote } from "../services/ai/transcriptionService.js";
 import { recordAuditEventFromRequest } from "../services/audit/auditService.js";
 import { settleNonCriticalTasks } from "../services/ops/sideEffects.js";
@@ -31,24 +31,32 @@ export async function uploadDoubtImage(req: Request, res: Response): Promise<voi
 
   await assertUploadSafety(req.file, "images");
   const saved = await saveUploadedFile(req.file, "images");
-  const asset = await UploadAssetModel.create({
-    ownerId: user.id,
-    ownerRole: user.role,
-    category: "images",
-    storageDriver: saved.storageDriver,
-    storageKey: saved.storageKey,
-    absolutePath: saved.absolutePath,
-    mimeType: saved.mimeType,
-    originalFileName: saved.originalFileName,
-    fileName: saved.fileName,
-    byteSize: saved.byteSize
-  });
+  const { data: asset, error: assetError } = await supabase
+    .from('upload_assets')
+    .insert({
+      ownerId: user.id,
+      ownerRole: user.role,
+      category: "images",
+      storageDriver: saved.storageDriver,
+      storageKey: saved.storageKey,
+      absolutePath: saved.absolutePath,
+      mimeType: saved.mimeType,
+      originalFileName: saved.originalFileName,
+      fileName: saved.fileName,
+      byteSize: saved.byteSize
+    })
+    .select()
+    .single();
+
+  if (assetError || !asset) {
+    throw new ApiError(500, "Failed to create upload asset: " + (assetError?.message || "Unknown error"));
+  }
 
   await settleNonCriticalTasks("upload-image-audit", [
     recordAuditEventFromRequest(req, {
       action: "upload.image.created",
       entityType: "uploadAsset",
-      entityId: String(asset._id),
+      entityId: String(asset.id),
       targetUserId: String(asset.ownerId),
       details: {
         category: asset.category,
@@ -79,25 +87,33 @@ export async function uploadVoiceNote(req: Request, res: Response): Promise<void
     fileName: req.file.originalname || "voice-note.webm"
   });
   const saved = await saveUploadedFile(req.file, "audio");
-  const asset = await UploadAssetModel.create({
-    ownerId: user.id,
-    ownerRole: user.role,
-    category: "audio",
-    storageDriver: saved.storageDriver,
-    storageKey: saved.storageKey,
-    absolutePath: saved.absolutePath,
-    mimeType: saved.mimeType,
-    originalFileName: saved.originalFileName,
-    fileName: saved.fileName,
-    byteSize: saved.byteSize,
-    transcript
-  });
+  const { data: asset, error: assetError } = await supabase
+    .from('upload_assets')
+    .insert({
+      ownerId: user.id,
+      ownerRole: user.role,
+      category: "audio",
+      storageDriver: saved.storageDriver,
+      storageKey: saved.storageKey,
+      absolutePath: saved.absolutePath,
+      mimeType: saved.mimeType,
+      originalFileName: saved.originalFileName,
+      fileName: saved.fileName,
+      byteSize: saved.byteSize,
+      transcript
+    })
+    .select()
+    .single();
+
+  if (assetError || !asset) {
+    throw new ApiError(500, "Failed to create upload asset: " + (assetError?.message || "Unknown error"));
+  }
 
   await settleNonCriticalTasks("upload-audio-audit", [
     recordAuditEventFromRequest(req, {
       action: "upload.audio.created",
       entityType: "uploadAsset",
-      entityId: String(asset._id),
+      entityId: String(asset.id),
       targetUserId: String(asset.ownerId),
       details: {
         category: asset.category,
@@ -112,9 +128,13 @@ export async function uploadVoiceNote(req: Request, res: Response): Promise<void
 
 export async function downloadUploadAsset(req: Request, res: Response): Promise<void> {
   const user = ensureAuthenticatedUser(req);
-  const asset = await UploadAssetModel.findById(req.params.id);
+  const { data: asset, error } = await supabase
+    .from('upload_assets')
+    .select('*')
+    .eq('id', req.params.id)
+    .single();
 
-  if (!asset) {
+  if (error || !asset) {
     throw new ApiError(404, "Upload not found.");
   }
 
@@ -125,7 +145,7 @@ export async function downloadUploadAsset(req: Request, res: Response): Promise<
     recordAuditEventFromRequest(req, {
       action: "upload.downloaded",
       entityType: "uploadAsset",
-      entityId: String(asset._id),
+      entityId: String(asset.id),
       targetUserId: String(asset.ownerId)
     })
   ]);

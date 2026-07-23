@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { env } from "../config/env.js";
-import { UserModel } from "../models/User.js";
+import { supabase } from "../config/db.js";
 import { ApiError } from "../utils/http.js";
 import { verifyToken } from "../utils/jwt.js";
 
@@ -18,7 +18,7 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
 
   try {
     const decoded = verifyToken(token);
-    const user = await UserModel.findById(decoded.id).select("name email role isActive tokenVersion");
+    const { data: user } = await supabase.from("users").select("id, name, email, role, isActive, tokenVersion").eq("id", decoded.id).maybeSingle();
 
     if (!user || !user.isActive || user.tokenVersion !== decoded.tokenVersion) {
       next(new ApiError(401, "Invalid or expired session.", undefined, "SESSION_REVOKED"));
@@ -26,7 +26,7 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
     }
 
     req.user = {
-      id: String(user._id),
+      id: String(user.id),
       name: user.name,
       email: user.email,
       role: user.role,

@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import type { Request, Response } from "express";
 
 import { env } from "../config/env.js";
-import { UserModel } from "../models/User.js";
+import { supabase } from "../config/db.js";
 import { issueOneTimeToken, consumeOneTimeToken } from "../services/auth/oneTimeTokenService.js";
 import { recordAuditEvent, recordAuditEventFromRequest } from "../services/audit/auditService.js";
 import { settleNonCriticalTasks } from "../services/ops/sideEffects.js";
@@ -12,7 +12,7 @@ import { buildCookieOptions, signToken } from "../utils/jwt.js";
 
 function toSafeUser(user: any) {
   return {
-    id: String(user._id),
+    id: String(user.id),
     name: user.name,
     email: user.email,
     role: user.role,
@@ -58,20 +58,23 @@ function buildUnknownPassword(): string {
 }
 
 async function registerFailedLogin(userId: string): Promise<void> {
-  const user = await UserModel.findById(userId);
+  const { data: user } = await supabase.from("users").select("*").eq("id", userId).maybeSingle();
 
   if (!user) {
     return;
   }
 
-  user.failedLoginAttempts += 1;
+  user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
 
   if (user.failedLoginAttempts >= env.loginAttemptLimit) {
     user.failedLoginAttempts = 0;
-    user.lockedUntil = new Date(Date.now() + env.loginLockMinutes * 60 * 1000);
+    user.lockedUntil = new Date(Date.now() + env.loginLockMinutes * 60 * 1000).toISOString();
   }
 
-  await user.save();
+  await supabase.from("users").update({
+    failedLoginAttempts: user.failedLoginAttempts,
+    lockedUntil: user.lockedUntil
+  }).eq("id", userId);
 }
 
 export async function login(req: Request, res: Response): Promise<void> {
@@ -81,10 +84,10 @@ export async function login(req: Request, res: Response): Promise<void> {
     throw new ApiError(400, "Email and password are required.");
   }
 
-  const user = await UserModel.findOne({ email: email.toLowerCase() });
+  const { data: user } = await supabase.from("users").select("*").eq("email", email.toLowerCase()).maybeSingle();
   const now = new Date();
 
-  if (user?.lockedUntil && user.lockedUntil > now) {
+  if (user?.lockedUntil && new Date(user.lockedUntil) > now) {
     throw new ApiError(429, "Too many failed login attempts. Please try again later.");
   }
 
@@ -105,15 +108,15 @@ export async function login(req: Request, res: Response): Promise<void> {
   const matches = await bcrypt.compare(password, user.password);
 
   if (!matches) {
-    await registerFailedLogin(String(user._id));
+    await registerFailedLogin(String(user.id));
     await settleNonCriticalTasks("login-failure-audit", [
       recordAuditEvent({
-        actorId: String(user._id),
+        actorId: String(user.id),
         actorRole: user.role,
         action: "auth.login.failed",
         entityType: "user",
-        entityId: String(user._id),
-        targetUserId: String(user._id),
+        entityId: String(user.id),
+        targetUserId: String(user.id),
         ipAddress: req.ip,
         userAgent: req.get("user-agent") ?? undefined,
         requestId: req.requestId
@@ -123,12 +126,16 @@ export async function login(req: Request, res: Response): Promise<void> {
   }
 
   user.failedLoginAttempts = 0;
-  user.lockedUntil = undefined;
-  user.lastLoginAt = now;
-  await user.save();
+  user.lockedUntil = null;
+  user.lastLoginAt = now.toISOString();
+  await supabase.from("users").update({
+    failedLoginAttempts: user.failedLoginAttempts,
+    lockedUntil: user.lockedUntil,
+    lastLoginAt: user.lastLoginAt
+  }).eq("id", user.id);
 
   const token = signToken({
-    id: String(user._id),
+    id: String(user.id),
     email: user.email,
     role: user.role,
     name: user.name,
@@ -140,8 +147,8 @@ export async function login(req: Request, res: Response): Promise<void> {
     recordAuditEventFromRequest(req, {
       action: "auth.login.succeeded",
       entityType: "user",
-      entityId: String(user._id),
-      targetUserId: String(user._id)
+      entityId: String(user.id),
+      targetUserId: String(user.id)
     })
   ]);
   ok(res, buildAuthPayload(user), "Login successful.");
@@ -152,7 +159,7 @@ export async function me(req: Request, res: Response): Promise<void> {
     throw new ApiError(401, "Authentication required.");
   }
 
-  const user = await UserModel.findById(req.user.id);
+  const { data: user } = await supabase.from("users").select("*").eq("id", req.user.id).maybeSingle();
   if (!user) {
     throw new ApiError(404, "User not found.");
   }
@@ -168,20 +175,26 @@ export async function logout(_req: Request, res: Response): Promise<void> {
 export async function setupPassword(req: Request, res: Response): Promise<void> {
   const { token, password } = req.body as { token: string; password: string };
   const authToken = await consumeOneTimeToken("invite", token);
-  const user = await UserModel.findById(authToken.userId);
+  const { data: user } = await supabase.from("users").select("*").eq("id", authToken.userId).maybeSingle();
 
   if (!user) {
     throw new ApiError(404, "User not found.");
   }
 
   user.password = await bcrypt.hash(password, 12);
-  user.tokenVersion += 1;
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
   user.failedLoginAttempts = 0;
-  user.lockedUntil = undefined;
-  await user.save();
+  user.lockedUntil = null;
+  
+  await supabase.from("users").update({
+    password: user.password,
+    tokenVersion: user.tokenVersion,
+    failedLoginAttempts: user.failedLoginAttempts,
+    lockedUntil: user.lockedUntil
+  }).eq("id", user.id);
 
   const sessionToken = signToken({
-    id: String(user._id),
+    id: String(user.id),
     email: user.email,
     role: user.role,
     name: user.name,
@@ -191,12 +204,12 @@ export async function setupPassword(req: Request, res: Response): Promise<void> 
   res.cookie(env.cookieName, sessionToken, buildCookieOptions());
   await settleNonCriticalTasks("setup-password-audit", [
     recordAuditEvent({
-      actorId: String(user._id),
+      actorId: String(user.id),
       actorRole: user.role,
       action: "auth.invite.completed",
       entityType: "user",
-      entityId: String(user._id),
-      targetUserId: String(user._id),
+      entityId: String(user.id),
+      targetUserId: String(user.id),
       ipAddress: req.ip,
       userAgent: req.get("user-agent") ?? undefined,
       requestId: req.requestId
@@ -208,13 +221,13 @@ export async function setupPassword(req: Request, res: Response): Promise<void> 
 
 export async function forgotPassword(req: Request, res: Response): Promise<void> {
   const { email } = req.body as { email: string };
-  const user = await UserModel.findOne({ email: email.toLowerCase(), isActive: true });
+  const { data: user } = await supabase.from("users").select("*").eq("email", email.toLowerCase()).eq("isActive", true).maybeSingle();
 
   let debugResetUrl: string | undefined;
 
   if (user) {
     const issued = await issueOneTimeToken({
-      userId: String(user._id),
+      userId: String(user.id),
       type: "password-reset",
       ttlMinutes: env.passwordResetTokenTtlMinutes
     });
@@ -225,12 +238,12 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
 
     await settleNonCriticalTasks("forgot-password-audit", [
       recordAuditEvent({
-        actorId: String(user._id),
+        actorId: String(user.id),
         actorRole: user.role,
         action: "auth.password-reset.requested",
         entityType: "user",
-        entityId: String(user._id),
-        targetUserId: String(user._id),
+        entityId: String(user.id),
+        targetUserId: String(user.id),
         ipAddress: req.ip,
         userAgent: req.get("user-agent") ?? undefined,
         requestId: req.requestId
@@ -251,27 +264,33 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
 export async function resetPassword(req: Request, res: Response): Promise<void> {
   const { token, password } = req.body as { token: string; password: string };
   const authToken = await consumeOneTimeToken("password-reset", token);
-  const user = await UserModel.findById(authToken.userId);
+  const { data: user } = await supabase.from("users").select("*").eq("id", authToken.userId).maybeSingle();
 
   if (!user || !user.isActive) {
     throw new ApiError(404, "User not found.");
   }
 
   user.password = await bcrypt.hash(password, 12);
-  user.tokenVersion += 1;
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
   user.failedLoginAttempts = 0;
-  user.lockedUntil = undefined;
-  await user.save();
+  user.lockedUntil = null;
+  
+  await supabase.from("users").update({
+    password: user.password,
+    tokenVersion: user.tokenVersion,
+    failedLoginAttempts: user.failedLoginAttempts,
+    lockedUntil: user.lockedUntil
+  }).eq("id", user.id);
 
   res.clearCookie(env.cookieName, buildCookieOptions());
   await settleNonCriticalTasks("reset-password-audit", [
     recordAuditEvent({
-      actorId: String(user._id),
+      actorId: String(user.id),
       actorRole: user.role,
       action: "auth.password-reset.completed",
       entityType: "user",
-      entityId: String(user._id),
-      targetUserId: String(user._id),
+      entityId: String(user.id),
+      targetUserId: String(user.id),
       ipAddress: req.ip,
       userAgent: req.get("user-agent") ?? undefined,
       requestId: req.requestId

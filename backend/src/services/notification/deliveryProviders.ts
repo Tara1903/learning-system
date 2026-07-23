@@ -1,4 +1,4 @@
-import { NotificationModel } from "../../models/Notification.js";
+import { supabase } from '../../config/db.js';
 import { env } from "../../config/env.js";
 import { logger } from "../ops/logger.js";
 
@@ -21,7 +21,7 @@ interface NotificationDeliveryProvider {
 const inAppProvider: NotificationDeliveryProvider = {
   channel: "in-app",
   deliver: async (input) => {
-    await NotificationModel.create({
+    const { error } = await supabase.from('notifications').insert({
       recipientId: input.recipientId,
       type: input.type,
       title: input.title,
@@ -29,6 +29,9 @@ const inAppProvider: NotificationDeliveryProvider = {
       relatedEntityType: input.relatedEntityType,
       relatedEntityId: input.relatedEntityId
     });
+    if (error) {
+      logger.error("Failed to save in-app notification to database", { error, input });
+    }
   }
 };
 

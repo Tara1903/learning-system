@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 
-import { AttendanceModel } from "../models/Attendance.js";
-import { UserModel } from "../models/User.js";
+import { supabase } from "../config/db.js";
 import { recalculateStudentAnalytics } from "../services/analytics/analyticsService.js";
 import { recordAuditEventFromRequest } from "../services/audit/auditService.js";
 import { createNotification, notifyLinkedParents } from "../services/notification/notificationService.js";
@@ -45,10 +44,10 @@ function calculateAttendancePercentage(records: Array<{ status: AttendanceStatus
 }
 
 async function assertParentAccess(parentId: string, studentId: string) {
-  const parent = await UserModel.findById(parentId).select("linkedStudentId linkedStudentIds");
+  const { data: parent } = await supabase.from('users').select('linked_student_id, linked_student_ids').eq('id', parentId).single();
   const linked =
-    parent?.linkedStudentId?.toString() === studentId ||
-    parent?.linkedStudentIds.some((id: { toString(): string }) => id.toString() === studentId);
+    parent?.linked_student_id?.toString() === studentId ||
+    (parent?.linked_student_ids || []).some((id: { toString(): string }) => id.toString() === studentId);
 
   if (!linked) {
     throw new ApiError(403, "Parent access denied for this student.");
@@ -72,17 +71,14 @@ export async function markAttendance(req: Request, res: Response): Promise<void>
       }
 
       const normalizedDate = parseAttendanceDate(record.date);
-      const attendance = await AttendanceModel.findOneAndUpdate(
-        { studentId: record.studentId, date: normalizedDate },
-        {
-          studentId: record.studentId,
+      const { data: attendance, error } = await supabase.from('attendance').upsert({
+          student_id: record.studentId,
           class: record.class,
-          date: normalizedDate,
+          date: normalizedDate.toISOString(),
           status: record.status,
-          markedBy: req.user?.id
-        },
-        { upsert: true, new: true }
-      );
+          marked_by: req.user?.id
+      }, { onConflict: 'student_id, date' }).select().single();
+      if (error) throw new ApiError(500, error.message);
 
       await settleNonCriticalTasks(
         "mark-attendance-side-effects",
@@ -94,19 +90,19 @@ export async function markAttendance(req: Request, res: Response): Promise<void>
             title: "Attendance updated",
             message: `Your attendance for ${record.class} was marked as ${record.status}.`,
             relatedEntityType: "attendance",
-            relatedEntityId: String(attendance._id)
+            relatedEntityId: attendance.id
           }),
           notifyLinkedParents(
             record.studentId,
             "Attendance updated",
             `Attendance was marked as ${record.status} for ${record.class}.`,
             "attendance",
-            String(attendance._id)
+            attendance.id
           ),
           recordAuditEventFromRequest(req, {
             action: "attendance.marked",
             entityType: "attendance",
-            entityId: String(attendance._id),
+            entityId: attendance.id,
             targetUserId: record.studentId,
             details: {
               class: record.class,
@@ -129,10 +125,11 @@ export async function markAttendance(req: Request, res: Response): Promise<void>
 
 export async function getAttendanceByClass(req: Request, res: Response): Promise<void> {
   const className = req.params.class;
-  const date = req.query.date ? parseAttendanceDate(String(req.query.date)) : undefined;
+  const dateStr = req.query.date ? parseAttendanceDate(String(req.query.date)).toISOString() : undefined;
 
-  const query = date ? { class: className, date } : { class: className };
-  const records = await AttendanceModel.find(query).populate("studentId", "name class");
+  let query = supabase.from('attendance').select('*, student:users(name, class)').eq('class', className);
+  if (dateStr) query = query.eq('date', dateStr);
+  const { data: records } = await query;
 
   ok(res, { records });
 }
@@ -148,8 +145,8 @@ export async function getAttendanceByStudent(req: Request, res: Response): Promi
     await assertParentAccess(req.user.id, studentId);
   }
 
-  const records = await AttendanceModel.find({ studentId }).sort({ date: -1 });
-  const percentage = calculateAttendancePercentage(records);
+  const { data: records = [] } = await supabase.from('attendance').select('*').eq('student_id', studentId).order('date', { ascending: false });
+  const percentage = calculateAttendancePercentage(records as any);
 
   await settleNonCriticalTasks("attendance-view-audit", [
     recordAuditEventFromRequest(req, {

@@ -1,7 +1,17 @@
-import { PracticeSetModel } from "../../models/PracticeSet.js";
-import type { AnalyticsDocument } from "../../models/Analytics.js";
-import type { DoubtDocument } from "../../models/Doubt.js";
-import type { PracticeQuestion, PracticeSetDocument } from "../../models/PracticeSet.js";
+import { supabase } from "../../config/db.js";
+type AnalyticsDocument = any;
+type DoubtDocument = any;
+type PracticeSetDocument = any;
+export interface PracticeQuestion {
+  prompt: string;
+  answer: string;
+  explanation: string;
+  difficulty: "easy" | "medium" | "hard";
+  status: "pending" | "correct" | "incorrect";
+  studentAnswer?: string;
+  feedback?: string;
+  answeredAt?: Date | string;
+}
 import { ApiError } from "../../utils/http.js";
 import { maybeGenerateStructuredText, parseStructuredJson } from "./aiClient.js";
 import { evaluateFallbackPracticeAnswer, summarizePracticeQuestions } from "./practiceEvaluation.js";
@@ -31,7 +41,7 @@ function buildFallbackQuestions(subject: string, topics: string[]) {
 }
 
 export async function generatePracticeSet(input: PracticeInput) {
-  const topics = input.analytics?.weakTopics.map((item) => item.topic) ?? [];
+  const topics = (input.analytics?.weak_topics || input.analytics?.weakTopics || []).map((item: any) => item.topic);
   let questions = buildFallbackQuestions(input.subject, topics);
 
   const prompt = JSON.stringify(
@@ -76,15 +86,18 @@ export async function generatePracticeSet(input: PracticeInput) {
     // Fall back to deterministic questions.
   }
 
-  return PracticeSetModel.create({
-    studentId: input.studentId,
+  const { data, error } = await supabase.from('practice_sets').insert({
+    student_id: input.studentId,
     subject: input.subject,
-    topicTags: topics,
+    topic_tags: topics,
     questions,
-    completionRate: 0,
-    accuracyPercentage: 0,
-    completedQuestions: 0
-  });
+    completion_rate: 0,
+    accuracy_percentage: 0,
+    completed_questions: 0
+  }).select().single();
+
+  if (error) throw new ApiError(500, error.message);
+  return data;
 }
 
 async function evaluatePracticeAnswerWithAi(input: {
@@ -135,7 +148,12 @@ async function evaluatePracticeAnswerWithAi(input: {
 }
 
 export async function listPracticeSetsForStudent(studentId: string) {
-  return PracticeSetModel.find({ studentId }).sort({ updatedAt: -1, createdAt: -1 });
+  const { data } = await supabase
+    .from('practice_sets')
+    .select('*')
+    .eq('student_id', studentId)
+    .order('updated_at', { ascending: false });
+  return data || [];
 }
 
 export async function submitPracticeResponses(input: {
@@ -145,7 +163,12 @@ export async function submitPracticeResponses(input: {
   studentClass: string;
   responses: PracticeResponsePayload[];
 }): Promise<PracticeSetDocument> {
-  const practiceSet = await PracticeSetModel.findOne({ _id: input.practiceSetId, studentId: input.studentId });
+  const { data: practiceSet, error: fetchErr } = await supabase
+    .from('practice_sets')
+    .select('*')
+    .eq('id', input.practiceSetId)
+    .eq('student_id', input.studentId)
+    .single();
 
   if (!practiceSet) {
     throw new ApiError(404, "Practice set not found.");
@@ -202,13 +225,17 @@ export async function submitPracticeResponses(input: {
 
   const summary = summarizePracticeQuestions(practiceSet.questions, completedAtSource);
 
-  practiceSet.completionRate = summary.completionRate;
-  practiceSet.accuracyPercentage = summary.accuracyPercentage;
-  practiceSet.completedQuestions = summary.completedQuestions;
-  practiceSet.completedAt = summary.completedAt;
-  practiceSet.lastAttemptedAt = completedAtSource;
+  const { data: updated, error } = await supabase.from('practice_sets').update({
+    questions: practiceSet.questions,
+    completion_rate: summary.completionRate,
+    accuracy_percentage: summary.accuracyPercentage,
+    completed_questions: summary.completedQuestions,
+    completed_at: summary.completedAt?.toISOString(),
+    last_attempted_at: completedAtSource.toISOString(),
+    updated_at: new Date().toISOString()
+  }).eq('id', practiceSet.id).select().single();
 
-  await practiceSet.save();
+  if (error) throw new ApiError(500, error.message);
 
-  return practiceSet;
+  return updated;
 }

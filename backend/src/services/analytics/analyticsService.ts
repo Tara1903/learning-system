@@ -1,10 +1,17 @@
-import { AnalyticsModel } from "../../models/Analytics.js";
-import { AttendanceModel } from "../../models/Attendance.js";
-import { DoubtModel } from "../../models/Doubt.js";
-import { PracticeSetModel } from "../../models/PracticeSet.js";
-import type { PracticeQuestion } from "../../models/PracticeSet.js";
-import { UserModel } from "../../models/User.js";
+import { supabase } from "../../config/db.js";
 import type { WeakTopic } from "../../types/domain.js";
+
+export interface PracticeQuestion {
+  prompt: string;
+  answer: string;
+  explanation: string;
+  difficulty: "easy" | "medium" | "hard";
+  status: "pending" | "correct" | "incorrect";
+  studentAnswer?: string;
+  feedback?: string;
+  answeredAt?: Date | string;
+}
+
 
 function aggregateWeakTopics(tags: string[], subject: string): WeakTopic[] {
   const topicMap = new Map<string, number>();
@@ -24,23 +31,27 @@ function aggregateWeakTopics(tags: string[], subject: string): WeakTopic[] {
 }
 
 export async function recalculateStudentAnalytics(studentId: string) {
-  const [attendance, doubts, practiceSets] = await Promise.all([
-    AttendanceModel.find({ studentId }),
-    DoubtModel.find({ studentId }),
-    PracticeSetModel.find({ studentId })
+  const [
+    { data: attendance = [] },
+    { data: doubts = [] },
+    { data: practiceSets = [] }
+  ] = await Promise.all([
+    supabase.from('attendance').select('*').eq('student_id', studentId),
+    supabase.from('doubts').select('*').eq('student_id', studentId),
+    supabase.from('practice_sets').select('*').eq('student_id', studentId)
   ]);
 
-  const totalAttendance = attendance.length;
-  const presentAttendance = attendance.filter((entry) => entry.status !== "absent").length;
+  const totalAttendance = (attendance || []).length;
+  const presentAttendance = (attendance || []).filter((entry) => entry.status !== "absent").length;
   const attendancePercentage = totalAttendance
     ? Number(((presentAttendance / totalAttendance) * 100).toFixed(2))
     : 0;
 
-  const allWeakTags = doubts.flatMap((doubt) => doubt.weakTopicTags);
-  const weakTopics = aggregateWeakTopics(allWeakTags, doubts[0]?.subject ?? "general");
-  const doubtCount = doubts.length;
+  const allWeakTags = (doubts || []).flatMap((doubt) => doubt.weakTopicTags);
+  const weakTopics = aggregateWeakTopics(allWeakTags, (doubts || [])[0]?.subject ?? "general");
+  const doubtCount = (doubts || []).length;
 
-  const answeredQuestions = practiceSets.flatMap((set) =>
+  const answeredQuestions = (practiceSets || []).flatMap((set) =>
     set.questions.filter(
       (question: PracticeQuestion) => question.status === "correct" || question.status === "incorrect"
     )
@@ -51,57 +62,63 @@ export async function recalculateStudentAnalytics(studentId: string) {
     : 0;
 
   const timestamps = [
-    ...attendance.map((entry) => entry.updatedAt.getTime()),
-    ...doubts.map((entry) => entry.updatedAt.getTime()),
-    ...practiceSets.map((entry) => entry.updatedAt.getTime())
-  ];
+    ...(attendance || []).map((entry: any) => new Date(entry.updated_at || entry.createdAt || 0).getTime()),
+    ...(doubts || []).map((entry: any) => new Date(entry.updated_at || entry.createdAt || 0).getTime()),
+    ...(practiceSets || []).map((entry: any) => new Date(entry.updated_at || entry.createdAt || 0).getTime())
+  ].filter(t => !isNaN(t) && t > 0);
 
-  const analytics = await AnalyticsModel.findOneAndUpdate(
-    { studentId },
-    {
-      studentId,
-      weakTopics,
-      doubtCount,
-      attendancePercentage,
-      practiceAccuracy,
-      lastActivityAt: timestamps.length ? new Date(Math.max(...timestamps)) : undefined
-    },
-    {
-      upsert: true,
-      new: true
-    }
-  );
+  const lastActivityAt = timestamps.length ? new Date(Math.max(...timestamps)).toISOString() : undefined;
+  
+  const { data: analytics, error } = await supabase
+    .from('analytics')
+    .upsert({
+      student_id: studentId,
+      weak_topics: weakTopics,
+      doubt_count: doubtCount,
+      attendance_percentage: attendancePercentage,
+      practice_accuracy: practiceAccuracy,
+      last_activity_at: lastActivityAt
+    }, { onConflict: 'student_id' })
+    .select()
+    .single();
+
 
   return analytics;
 }
 
 export async function getStudentAnalytics(studentId: string) {
-  return (await AnalyticsModel.findOne({ studentId })) ?? recalculateStudentAnalytics(studentId);
+  const { data } = await supabase.from('analytics').select('*').eq('student_id', studentId).single();
+  return data ?? recalculateStudentAnalytics(studentId);
 }
 
 export async function buildInstituteAnalytics() {
-  const [users, analytics, attendanceCount, doubtCount] = await Promise.all([
-    UserModel.find().select("role"),
-    AnalyticsModel.find(),
-    AttendanceModel.countDocuments(),
-    DoubtModel.countDocuments()
+  const [
+    { data: users = [] },
+    { data: analytics = [] },
+    { count: attendanceCount },
+    { count: doubtCount }
+  ] = await Promise.all([
+    supabase.from('users').select('role'),
+    supabase.from('analytics').select('*'),
+    supabase.from('attendance').select('*', { count: 'exact', head: true }),
+    supabase.from('doubts').select('*', { count: 'exact', head: true })
   ]);
 
-  const roleCounts = users.reduce<Record<string, number>>((acc, user) => {
+  const roleCounts = (users || []).reduce<Record<string, number>>((acc, user) => {
     acc[user.role] = (acc[user.role] ?? 0) + 1;
     return acc;
   }, {});
 
   const averageAttendance =
-    analytics.length > 0
+    (analytics || []).length > 0
       ? Number(
-          (analytics.reduce((sum, item) => sum + item.attendancePercentage, 0) / analytics.length).toFixed(2)
+          ((analytics || []).reduce((sum, item: any) => sum + (item.attendance_percentage || item.attendancePercentage || 0), 0) / (analytics || []).length).toFixed(2)
         )
       : 0;
 
   const weakTopicMap = new Map<string, number>();
-  analytics.forEach((item) => {
-    item.weakTopics.forEach((topic: WeakTopic) => {
+  (analytics || []).forEach((item: any) => {
+    (item.weak_topics || item.weakTopics || []).forEach((topic: WeakTopic) => {
       weakTopicMap.set(topic.topic, (weakTopicMap.get(topic.topic) ?? 0) + 1);
     });
   });
@@ -117,8 +134,12 @@ export async function buildInstituteAnalytics() {
     doubtCount,
     averageAttendance,
     topWeakTopics,
-    atRiskStudents: analytics.filter(
-      (item) => item.attendancePercentage < 75 || (item.practiceAccuracy > 0 && item.practiceAccuracy < 60)
+    atRiskStudents: (analytics || []).filter(
+      (item: any) => {
+        const att = item.attendance_percentage || item.attendancePercentage || 0;
+        const acc = item.practice_accuracy || item.practiceAccuracy || 0;
+        return att < 75 || (acc > 0 && acc < 60);
+      }
     ).length
   };
 }

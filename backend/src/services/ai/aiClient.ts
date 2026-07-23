@@ -567,10 +567,10 @@ async function requestNvidiaStructuredText(request: ResponseRequest): Promise<st
       body: JSON.stringify({
         model,
         temperature: 0.2,
-        max_tokens: 1600,
-        top_p: 0.9,
+        max_tokens: 16384,
+        top_p: 0.95,
         chat_template_kwargs: {
-          enable_thinking: false
+          enable_thinking: true
         },
         messages: [
           {

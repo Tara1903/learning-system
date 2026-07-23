@@ -1,5 +1,4 @@
-import type { UploadAssetDocument } from "../../models/UploadAsset.js";
-import { UserModel } from "../../models/User.js";
+import { supabase } from '../../config/db.js';
 import { env } from "../../config/env.js";
 import type { AuthUser } from "../../types/domain.js";
 import { ApiError } from "../../utils/http.js";
@@ -20,24 +19,24 @@ export function buildUploadDownloadUrl(assetId: string): string {
   return new URL(`uploads/${assetId}/download`, withTrailingSlash(env.publicApiBaseUrl)).toString();
 }
 
-export function serializeUploadAsset(asset: UploadAssetDocument) {
+export function serializeUploadAsset(asset: any) {
   return {
-    assetId: String(asset._id),
+    assetId: String(asset.id),
     fileName: asset.fileName,
     mimeType: asset.mimeType,
-    downloadUrl: buildUploadDownloadUrl(String(asset._id)),
-    publicUrl: buildUploadDownloadUrl(String(asset._id)),
+    downloadUrl: buildUploadDownloadUrl(String(asset.id)),
+    publicUrl: buildUploadDownloadUrl(String(asset.id)),
     transcript: asset.transcript
   };
 }
 
-export async function assertUserCanAccessUpload(user: AuthUser, asset: UploadAssetDocument): Promise<void> {
+export async function assertUserCanAccessUpload(user: AuthUser, asset: any): Promise<void> {
   if (user.role === "admin" || user.role === "teacher" || String(asset.ownerId) === user.id) {
     return;
   }
 
   if (user.role === "parent") {
-    const parent = await UserModel.findById(user.id).select("linkedStudentId linkedStudentIds");
+    const { data: parent } = await supabase.from('users').select('linkedStudentId, linkedStudentIds').eq('id', user.id).single();
     const linkedIds = [
       ...(parent?.linkedStudentId ? [String(parent.linkedStudentId)] : []),
       ...(parent?.linkedStudentIds ?? []).map((item: { toString(): string }) => String(item))

@@ -221,7 +221,9 @@ export const env = {
   enableSeedAdminBootstrap: parseBoolean(process.env.SEED_ADMIN_BOOTSTRAP, !isProduction),
   seedAdminName: process.env.SEED_ADMIN_NAME ?? "Institute Admin",
   seedAdminEmail: process.env.SEED_ADMIN_EMAIL ?? "admin@adhyayan.local",
-  seedAdminPassword: process.env.SEED_ADMIN_PASSWORD ?? "Password@123"
+  seedAdminPassword: process.env.SEED_ADMIN_PASSWORD ?? "Password@123",
+  supabaseUrl: process.env.SUPABASE_URL ?? "",
+  supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""
 };
 
 const envErrors: string[] = [];

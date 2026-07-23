@@ -1,5 +1,7 @@
-import type { AnalyticsDocument } from "../../models/Analytics.js";
+import { supabase } from "../../config/db.js";
 import { maybeGenerateStructuredText, parseStructuredJson } from "./aiClient.js";
+
+type AnalyticsDocument = any;
 
 function buildStudentRecommendations(analytics: AnalyticsDocument | null): string[] {
   if (!analytics) {
@@ -11,17 +13,19 @@ function buildStudentRecommendations(analytics: AnalyticsDocument | null): strin
 
   const recommendations: string[] = [];
 
-  if (analytics.attendancePercentage < 85) {
+  if ((analytics.attendance_percentage || analytics.attendancePercentage || 0) < 85) {
     recommendations.push("Improve attendance this week to avoid learning gaps in class continuity.");
   }
 
-  if (analytics.weakTopics.length > 0) {
-    recommendations.push(`Revise ${analytics.weakTopics[0]?.topic} with one guided doubt session and one practice set.`);
+  const weakTopics = analytics.weak_topics || analytics.weakTopics || [];
+  if (weakTopics.length > 0) {
+    recommendations.push(`Revise ${weakTopics[0]?.topic} with one guided doubt session and one practice set.`);
   }
 
-  if (analytics.practiceAccuracy === 0) {
+  const practiceAccuracy = analytics.practice_accuracy || analytics.practiceAccuracy || 0;
+  if (practiceAccuracy === 0) {
     recommendations.push("Attempt your first focused practice round so the system can coach you with real answer patterns.");
-  } else if (analytics.practiceAccuracy < 70) {
+  } else if (practiceAccuracy < 70) {
     recommendations.push("Attempt another practice round and review the explanation before checking the final answer.");
   }
 
@@ -41,15 +45,16 @@ function buildParentRecommendations(analytics: AnalyticsDocument | null): string
 
   const recommendations: string[] = [];
 
-  if (analytics.attendancePercentage < 85) {
+  if ((analytics.attendance_percentage || analytics.attendancePercentage || 0) < 85) {
     recommendations.push("Monitor regular attendance and speak with the class teacher if absences continue.");
   }
 
-  if (analytics.weakTopics.length > 0) {
-    recommendations.push(`Support revision time for ${analytics.weakTopics[0]?.topic} this week.`);
+  const weakTopics = analytics.weak_topics || analytics.weakTopics || [];
+  if (weakTopics.length > 0) {
+    recommendations.push(`Support revision time for ${weakTopics[0]?.topic} this week.`);
   }
 
-  if (analytics.doubtCount === 0) {
+  if ((analytics.doubt_count || analytics.doubtCount || 0) === 0) {
     recommendations.push("Encourage your child to ask doubts at home instead of waiting until the next class.");
   }
 
@@ -72,13 +77,13 @@ async function maybeEnhanceRecommendations(
       userPrompt: JSON.stringify(
         {
           audience,
-          analytics: analytics
+              analytics: analytics
             ? {
-                attendancePercentage: analytics.attendancePercentage,
-                doubtCount: analytics.doubtCount,
-                weakTopics: analytics.weakTopics,
-                practiceAccuracy: analytics.practiceAccuracy,
-                lastActivityAt: analytics.lastActivityAt
+                attendancePercentage: analytics.attendance_percentage || analytics.attendancePercentage,
+                doubtCount: analytics.doubt_count || analytics.doubtCount,
+                weakTopics: analytics.weak_topics || analytics.weakTopics,
+                practiceAccuracy: analytics.practice_accuracy || analytics.practiceAccuracy,
+                lastActivityAt: analytics.last_activity_at || analytics.lastActivityAt
               }
             : null,
           baselineRecommendations: baseRecommendations

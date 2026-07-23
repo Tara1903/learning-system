@@ -3,7 +3,7 @@ import path from "node:path";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 import { env } from "../../config/env.js";
-import type { UploadAssetDocument } from "../../models/UploadAsset.js";
+
 
 const imageDir = path.join(env.uploadDir, "images");
 const audioDir = path.join(env.uploadDir, "audio");
@@ -28,7 +28,7 @@ interface UploadStorageProvider {
   driver: "local" | "s3";
   ensureReady: () => Promise<void>;
   saveUploadedFile: (file: Express.Multer.File, category: "images" | "audio") => Promise<SavedUpload>;
-  readStoredFile: (asset: UploadAssetDocument) => Promise<StoredFileContent>;
+  readStoredFile: (asset: any) => Promise<StoredFileContent>;
 }
 
 function sanitizeFileName(name: string): string {
@@ -159,6 +159,6 @@ export async function saveUploadedFile(file: Express.Multer.File, category: "ima
   return provider.saveUploadedFile(file, category);
 }
 
-export async function readUploadedAsset(asset: UploadAssetDocument): Promise<StoredFileContent> {
+export async function readUploadedAsset(asset: any): Promise<StoredFileContent> {
   return getStorageProvider().readStoredFile(asset);
 }

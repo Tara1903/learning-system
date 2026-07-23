@@ -1,7 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { AuthTokenModel, type AuthTokenType } from "../../models/AuthToken.js";
+import { supabase } from "../../config/db.js";
 import { ApiError } from "../../utils/http.js";
+
+export type AuthTokenType = "invite" | "password-reset";
 
 interface IssueTokenInput {
   userId: string;
@@ -21,42 +23,42 @@ export async function issueOneTimeToken(input: IssueTokenInput): Promise<{
   const rawToken = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + input.ttlMinutes * 60 * 1000);
 
-  await AuthTokenModel.updateMany(
-    {
-      userId: input.userId,
-      type: input.type,
-      usedAt: { $exists: false }
-    },
-    {
-      usedAt: new Date()
-    }
-  );
+  await supabase
+    .from("auth_tokens")
+    .update({ usedAt: new Date().toISOString() })
+    .eq("userId", input.userId)
+    .eq("type", input.type)
+    .is("usedAt", null);
 
-  await AuthTokenModel.create({
+  await supabase.from("auth_tokens").insert({
     userId: input.userId,
     type: input.type,
     tokenHash: hashOneTimeToken(rawToken),
     createdBy: input.createdBy,
-    expiresAt
+    expiresAt: expiresAt.toISOString()
   });
 
   return { rawToken, expiresAt };
 }
 
 export async function consumeOneTimeToken(type: AuthTokenType, rawToken: string) {
-  const token = await AuthTokenModel.findOne({
-    type,
-    tokenHash: hashOneTimeToken(rawToken),
-    usedAt: { $exists: false },
-    expiresAt: { $gt: new Date() }
-  });
+  const { data: token } = await supabase
+    .from("auth_tokens")
+    .select("*")
+    .eq("type", type)
+    .eq("tokenHash", hashOneTimeToken(rawToken))
+    .is("usedAt", null)
+    .gt("expiresAt", new Date().toISOString())
+    .maybeSingle();
 
   if (!token) {
     throw new ApiError(400, "Invalid or expired token.");
   }
 
-  token.usedAt = new Date();
-  await token.save();
+  await supabase
+    .from("auth_tokens")
+    .update({ usedAt: new Date().toISOString() })
+    .eq("id", token.id);
 
   return token;
 }

@@ -1,17 +1,11 @@
 import type { Request, Response } from "express";
 
-import { AttendanceModel } from "../models/Attendance.js";
-import { UserModel } from "../models/User.js";
+import { supabase } from "../config/db.js";
 import { getStudentAnalytics } from "../services/analytics/analyticsService.js";
 import { recordAuditEventFromRequest } from "../services/audit/auditService.js";
 import { generateParentRecommendations } from "../services/ai/recommendationService.js";
 import { settleNonCriticalTasks } from "../services/ops/sideEffects.js";
 import { ApiError, ok } from "../utils/http.js";
-
-interface StudentReference {
-  _id?: { toString(): string };
-  toString(): string;
-}
 
 function readRouteParam(value: string | string[] | undefined, fieldName: string): string {
   const normalized = Array.isArray(value) ? value[0] : value;
@@ -23,19 +17,11 @@ function readRouteParam(value: string | string[] | undefined, fieldName: string)
   return normalized;
 }
 
-function extractStudentId(reference: StudentReference | null | undefined): string | null {
-  if (!reference) {
-    return null;
-  }
-
-  return reference._id?.toString() ?? reference.toString();
-}
-
 async function assertParentAccess(parentId: string, studentId: string) {
-  const parent = await UserModel.findById(parentId);
+  const { data: parent } = await supabase.from("users").select("*").eq("id", parentId).maybeSingle();
   const linked =
-    parent?.linkedStudentId?.toString() === studentId ||
-    parent?.linkedStudentIds.some((id: { toString(): string }) => id.toString() === studentId);
+    parent?.linkedStudentId === studentId ||
+    (Array.isArray(parent?.linkedStudentIds) && parent.linkedStudentIds.includes(studentId));
 
   if (!linked) {
     throw new ApiError(403, "Parent access denied for this student.");
@@ -43,21 +29,21 @@ async function assertParentAccess(parentId: string, studentId: string) {
 }
 
 export async function getParentDashboard(req: Request, res: Response): Promise<void> {
-  const parent = await UserModel.findById(req.user?.id).populate("linkedStudentIds", "name class");
+  const { data: parent } = await supabase.from("users").select("*").eq("id", req.user?.id).maybeSingle();
 
   if (!parent) {
     throw new ApiError(404, "Parent not found.");
   }
 
-  const linkedIds = [...(parent.linkedStudentId ? [parent.linkedStudentId] : []), ...parent.linkedStudentIds]
-    .map((item) => extractStudentId(item as StudentReference))
+  const linkedIds = [...(parent.linkedStudentId ? [parent.linkedStudentId] : []), ...(Array.isArray(parent.linkedStudentIds) ? parent.linkedStudentIds : [])]
+    .map((item) => String(item))
     .filter((item): item is string => Boolean(item));
 
   const analytics = await Promise.all(linkedIds.map((studentId) => getStudentAnalytics(studentId)));
 
   const studentSummaries = await Promise.all(
     linkedIds.map(async (studentId, index) => {
-      const student = await UserModel.findById(studentId).select("name class");
+      const { data: student } = await supabase.from("users").select("name, class").eq("id", studentId).maybeSingle();
       return {
         id: studentId,
         name: student?.name ?? "Student",
@@ -70,7 +56,7 @@ export async function getParentDashboard(req: Request, res: Response): Promise<v
 
   ok(res, {
     parent: {
-      id: String(parent._id),
+      id: String(parent.id),
       name: parent.name,
       email: parent.email
     },
@@ -82,7 +68,7 @@ export async function getParentStudentAttendance(req: Request, res: Response): P
   const studentId = readRouteParam(req.params.id, "Student id");
   await assertParentAccess(req.user?.id!, studentId);
 
-  const records = await AttendanceModel.find({ studentId }).sort({ date: -1 });
+  const { data: records } = await supabase.from("attendance").select("*").eq("studentId", studentId).order("date", { ascending: false });
   await settleNonCriticalTasks("parent-view-attendance-audit", [
     recordAuditEventFromRequest(req, {
       action: "parent.attendance.viewed",
@@ -90,7 +76,7 @@ export async function getParentStudentAttendance(req: Request, res: Response): P
       targetUserId: studentId
     })
   ]);
-  ok(res, { records });
+  ok(res, { records: records ?? [] });
 }
 
 export async function getParentStudentAnalytics(req: Request, res: Response): Promise<void> {

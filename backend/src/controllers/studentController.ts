@@ -1,12 +1,6 @@
 import type { Request, Response } from "express";
 
-import { AnalyticsModel } from "../models/Analytics.js";
-import type { DoubtDocument } from "../models/Doubt.js";
-import { DoubtModel } from "../models/Doubt.js";
-import { AttendanceModel } from "../models/Attendance.js";
-import { NotificationModel } from "../models/Notification.js";
-import { PracticeSetModel } from "../models/PracticeSet.js";
-import { UserModel } from "../models/User.js";
+import { supabase } from "../config/db.js";
 import { recalculateStudentAnalytics, getStudentAnalytics } from "../services/analytics/analyticsService.js";
 import { recordAuditEventFromRequest } from "../services/audit/auditService.js";
 import {
@@ -20,9 +14,9 @@ import { settleNonCriticalTasks } from "../services/ops/sideEffects.js";
 import { buildUploadDownloadUrl } from "../services/upload/accessService.js";
 import { ok, ApiError } from "../utils/http.js";
 
-function serializeDoubt(thread: DoubtDocument) {
+function serializeDoubt(thread: any) {
   return {
-    _id: String(thread._id),
+    id: String(thread.id),
     question: thread.question,
     subject: thread.subject,
     class: thread.class,
@@ -32,7 +26,7 @@ function serializeDoubt(thread: DoubtDocument) {
     voiceTranscript: thread.voiceTranscript,
     messages: thread.messages,
     updatedAt: thread.updatedAt,
-    attachments: thread.attachments.map((attachment) => ({
+    attachments: (thread.attachments || []).map((attachment: any) => ({
       type: attachment.type,
       fileName: attachment.fileName,
       assetId: attachment.assetId ? String(attachment.assetId) : undefined,
@@ -51,20 +45,26 @@ function getStudentId(req: Request): string {
 
 export async function getStudentDashboard(req: Request, res: Response): Promise<void> {
   const studentId = getStudentId(req);
-  const [student, analytics, attendance, recentDoubts, unreadNotifications] = await Promise.all([
-    UserModel.findById(studentId).select("name class profile"),
+  const [
+    { data: student },
+    analytics,
+    { data: attendance },
+    { data: recentDoubts },
+    { count: unreadNotifications }
+  ] = await Promise.all([
+    supabase.from("users").select("name, class, profile").eq("id", studentId).maybeSingle(),
     getStudentAnalytics(studentId),
-    AttendanceModel.find({ studentId }).sort({ date: -1 }).limit(10),
-    DoubtModel.find({ studentId }).sort({ updatedAt: -1 }).limit(5),
-    NotificationModel.countDocuments({ recipientId: studentId, read: false })
+    supabase.from("attendance").select("*").eq("studentId", studentId).order("date", { ascending: false }).limit(10),
+    supabase.from("doubts").select("*").eq("studentId", studentId).order("updatedAt", { ascending: false }).limit(5),
+    supabase.from("notifications").select("*", { count: "exact", head: true }).eq("recipientId", studentId).eq("read", false)
   ]);
   const recommendations = await generateStudentRecommendations(analytics);
 
   ok(res, {
     student,
     analytics,
-    attendance,
-    recentDoubts: recentDoubts.map((doubt) => serializeDoubt(doubt)),
+    attendance: attendance || [],
+    recentDoubts: (recentDoubts || []).map((doubt) => serializeDoubt(doubt)),
     unreadNotifications,
     recommendations
   });
@@ -72,14 +72,14 @@ export async function getStudentDashboard(req: Request, res: Response): Promise<
 
 export async function getStudentAttendance(req: Request, res: Response): Promise<void> {
   const studentId = getStudentId(req);
-  const records = await AttendanceModel.find({ studentId }).sort({ date: -1 });
+  const { data: records } = await supabase.from("attendance").select("*").eq("studentId", studentId).order("date", { ascending: false });
   const analytics = await getStudentAnalytics(studentId);
-  ok(res, { records, percentage: analytics.attendancePercentage });
+  ok(res, { records: records || [], percentage: analytics.attendancePercentage });
 }
 
 export async function getStudentDoubts(req: Request, res: Response): Promise<void> {
-  const doubts = await DoubtModel.find({ studentId: getStudentId(req) }).sort({ updatedAt: -1 });
-  ok(res, { doubts: doubts.map((doubt) => serializeDoubt(doubt)) });
+  const { data: doubts } = await supabase.from("doubts").select("*").eq("studentId", getStudentId(req)).order("updatedAt", { ascending: false });
+  ok(res, { doubts: (doubts || []).map((doubt) => serializeDoubt(doubt)) });
 }
 
 export async function getStudentPracticeSets(req: Request, res: Response): Promise<void> {
@@ -89,21 +89,21 @@ export async function getStudentPracticeSets(req: Request, res: Response): Promi
 
 export async function generateStudentPractice(req: Request, res: Response): Promise<void> {
   const studentId = getStudentId(req);
-  const student = await UserModel.findById(studentId);
+  const { data: student } = await supabase.from("users").select("*").eq("id", studentId).maybeSingle();
 
   if (!student) {
     throw new ApiError(404, "Student not found.");
   }
 
   const subject = String(req.body.subject ?? "General Studies");
-  const analytics = await AnalyticsModel.findOne({ studentId });
-  const recentDoubts = await DoubtModel.find({ studentId, subject }).sort({ updatedAt: -1 }).limit(5);
+  const { data: analytics } = await supabase.from("analytics").select("*").eq("studentId", studentId).maybeSingle();
+  const { data: recentDoubts } = await supabase.from("doubts").select("*").eq("studentId", studentId).eq("subject", subject).order("updatedAt", { ascending: false }).limit(5);
   const practiceSet = await generatePracticeSet({
     studentId,
     subject,
     studentClass: student.class ?? "12",
-    analytics,
-    recentDoubts
+    analytics: analytics || {},
+    recentDoubts: recentDoubts || []
   });
 
   await settleNonCriticalTasks(
@@ -116,19 +116,19 @@ export async function generateStudentPractice(req: Request, res: Response): Prom
         title: "Practice set ready",
         message: `A new ${subject} practice set is ready for you.`,
         relatedEntityType: "practiceSet",
-        relatedEntityId: String(practiceSet._id)
+        relatedEntityId: String(practiceSet.id || practiceSet._id)
       }),
       notifyLinkedParents(
         studentId,
         "Student practice generated",
         `${student.name} generated a new ${subject} practice set.`,
         "practiceSet",
-        String(practiceSet._id)
+        String(practiceSet.id || practiceSet._id)
       ),
       recordAuditEventFromRequest(req, {
         action: "student.practice.generated",
         entityType: "practiceSet",
-        entityId: String(practiceSet._id),
+        entityId: String(practiceSet.id || practiceSet._id),
         targetUserId: studentId,
         details: {
           subject
@@ -146,13 +146,13 @@ export async function generateStudentPractice(req: Request, res: Response): Prom
 
 export async function submitStudentPractice(req: Request, res: Response): Promise<void> {
   const studentId = getStudentId(req);
-  const student = await UserModel.findById(studentId);
+  const { data: student } = await supabase.from("users").select("*").eq("id", studentId).maybeSingle();
 
   if (!student) {
     throw new ApiError(404, "Student not found.");
   }
 
-  const practiceSet = await PracticeSetModel.findOne({ _id: req.params.id, studentId });
+  const { data: practiceSet } = await supabase.from("practice_sets").select("*").eq("id", req.params.id).eq("studentId", studentId).maybeSingle();
 
   if (!practiceSet) {
     throw new ApiError(404, "Practice set not found.");
@@ -161,7 +161,7 @@ export async function submitStudentPractice(req: Request, res: Response): Promis
   const responses = Array.isArray(req.body.responses) ? req.body.responses : [];
 
   const reviewedPracticeSet = await submitPracticeResponses({
-    practiceSetId: String(practiceSet._id),
+    practiceSetId: String(practiceSet.id),
     studentId,
     subject: practiceSet.subject,
     studentClass: student.class ?? "12",
@@ -180,7 +180,7 @@ export async function submitStudentPractice(req: Request, res: Response): Promis
           ? `Your ${reviewedPracticeSet.subject} practice set has been reviewed.`
           : `Your ${reviewedPracticeSet.subject} practice answers were saved and reviewed.`,
         relatedEntityType: "practiceSet",
-        relatedEntityId: String(reviewedPracticeSet._id)
+        relatedEntityId: String(reviewedPracticeSet.id || reviewedPracticeSet._id)
       }),
       notifyLinkedParents(
         studentId,
@@ -189,12 +189,12 @@ export async function submitStudentPractice(req: Request, res: Response): Promis
           ? `${student.name} completed a ${reviewedPracticeSet.subject} practice set.`
           : `${student.name} updated progress on a ${reviewedPracticeSet.subject} practice set.`,
         "practiceSet",
-        String(reviewedPracticeSet._id)
+        String(reviewedPracticeSet.id || reviewedPracticeSet._id)
       ),
       recordAuditEventFromRequest(req, {
         action: "student.practice.submitted",
         entityType: "practiceSet",
-        entityId: String(reviewedPracticeSet._id),
+        entityId: String(reviewedPracticeSet.id || reviewedPracticeSet._id),
         targetUserId: studentId,
         details: {
           subject: reviewedPracticeSet.subject,
@@ -205,7 +205,7 @@ export async function submitStudentPractice(req: Request, res: Response): Promis
     ],
     {
       studentId,
-      practiceSetId: String(reviewedPracticeSet._id)
+      practiceSetId: String(reviewedPracticeSet.id || reviewedPracticeSet._id)
     }
   );
 
@@ -216,3 +216,4 @@ export async function getStudentRecommendations(req: Request, res: Response): Pr
   const analytics = await getStudentAnalytics(getStudentId(req));
   ok(res, { recommendations: await generateStudentRecommendations(analytics) });
 }
+
