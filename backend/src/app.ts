@@ -18,6 +18,7 @@ export const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", env.trustedProxy);
 app.use(requestContextMiddleware);
+// @ts-ignore - Vercel strict TS check doesn't see helmet's call signature
 app.use(
   helmet({
     crossOriginResourcePolicy: false
