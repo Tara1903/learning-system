@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
 import { supabase } from "../config/db.js";
-import { getStudentAnalytics, buildInstituteAnalytics } from "../services/analytics/analyticsService.js";
+import { getStudentAnalytics, getStudentsAnalytics, buildInstituteAnalytics } from "../services/analytics/analyticsService.js";
 import { recordAuditEventFromRequest } from "../services/audit/auditService.js";
 import { createNotification } from "../services/notification/notificationService.js";
 import { settleNonCriticalTasks } from "../services/ops/sideEffects.js";
@@ -197,13 +197,8 @@ async function buildManagedUsersPage(
     .range(skip, skip + pageSize - 1);
 
   const hydratedUsers = users || [];
-  const studentAnalytics = new Map(
-    await Promise.all(
-      hydratedUsers
-        .filter((user) => user.role === "student")
-        .map(async (student) => [String(student.id), await getStudentAnalytics(String(student.id))] as const)
-    )
-  );
+  const studentIds = hydratedUsers.filter((u) => u.role === "student").map((u) => String(u.id));
+  const studentAnalytics = await getStudentsAnalytics(studentIds);
 
   return {
     items: hydratedUsers.map((user) =>

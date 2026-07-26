@@ -223,3 +223,52 @@ CREATE INDEX idx_practice_sets_student_id_updated_at ON practice_sets(student_id
 CREATE TRIGGER update_practice_sets_updated_at
 BEFORE UPDATE ON practice_sets
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON attendance(student_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_student_id ON analytics(student_id);
+CREATE INDEX IF NOT EXISTS idx_doubts_resolved_at ON doubts(resolved_at);
+
+-- 10. RPCs for Analytics Aggregation
+CREATE OR REPLACE FUNCTION get_institute_analytics()
+RETURNS JSON AS $$
+DECLARE
+    role_counts JSON;
+    avg_attendance REAL;
+    at_risk_students INTEGER;
+    top_weak_topics JSON;
+    attendance_count BIGINT;
+    doubt_count BIGINT;
+BEGIN
+    SELECT json_object_agg(role, count) INTO role_counts
+    FROM (SELECT role, COUNT(*) as count FROM users GROUP BY role) t;
+
+    SELECT COALESCE(AVG(attendance_percentage), 0) INTO avg_attendance
+    FROM analytics;
+
+    SELECT COUNT(*) INTO at_risk_students
+    FROM analytics
+    WHERE attendance_percentage < 75 OR (practice_accuracy > 0 AND practice_accuracy < 60);
+
+    SELECT json_agg(row_to_json(t)) INTO top_weak_topics
+    FROM (
+        SELECT topic_val->>'topic' as topic, SUM((topic_val->>'confidence')::numeric) as score
+        FROM analytics, jsonb_array_elements(weak_topics) as topic_val
+        GROUP BY topic_val->>'topic'
+        ORDER BY score DESC
+        LIMIT 6
+    ) t;
+
+    SELECT COUNT(*) INTO attendance_count FROM attendance;
+    SELECT COUNT(*) INTO doubt_count FROM doubts;
+
+    RETURN json_build_object(
+        'roleCounts', COALESCE(role_counts, '{}'::json),
+        'averageAttendance', avg_attendance,
+        'atRiskStudents', at_risk_students,
+        'topWeakTopics', COALESCE(top_weak_topics, '[]'::json),
+        'attendanceCount', attendance_count,
+        'doubtCount', doubt_count
+    );
+END;
+$$ LANGUAGE plpgsql;

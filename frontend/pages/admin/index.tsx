@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { BarChart3, ShieldCheck, UsersRound, Waves } from "lucide-react";
-import { useEffect, useState } from "react";
 
 import { LoadFailurePanel } from "@/components/LoadFailurePanel";
 import { LoadingPanel } from "@/components/LoadingPanel";
@@ -9,7 +8,7 @@ import { SectionCard } from "@/components/SectionCard";
 import { StatCard } from "@/components/StatCard";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
-import { apiFetch } from "@/utils/api";
+import { useApi } from "@/hooks/useApi";
 
 interface AdminAnalytics {
   roleCounts: Record<string, number>;
@@ -21,30 +20,17 @@ interface AdminAnalytics {
 }
 
 export default function AdminDashboardPage() {
-  const { user, status, error } = useRequireAuth(["admin"]);
-  const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null);
-  const [loadError, setLoadError] = useState("");
+  const { user, status: authStatus, error: authError } = useRequireAuth(["admin"]);
+  const { data: analytics, error: analyticsError, isLoading: analyticsLoading } = useApi<AdminAnalytics>(
+    authStatus === "authenticated" ? "/admin/analytics" : null
+  );
 
-  useEffect(() => {
-    if (status === "authenticated") {
-      void apiFetch<AdminAnalytics>("/admin/analytics")
-        .then((result) => {
-          setAnalytics(result);
-          setLoadError("");
-        })
-        .catch((loadAnalyticsError) => {
-          setAnalytics(null);
-          setLoadError(loadAnalyticsError instanceof Error ? loadAnalyticsError.message : "Unable to load institute analytics.");
-        });
-    }
-  }, [status]);
-
-  if (!user || status === "loading" || status === "idle") {
+  if (!user || authStatus === "loading" || authStatus === "idle") {
     return <LoadingPanel label="Loading admin workspace..." />;
   }
 
-  if (status === "error") {
-    return <LoadFailurePanel title="Admin access could not be verified" message={error || "The admin dashboard could not confirm your current session."} onRetry={() => window.location.reload()} />;
+  if (authStatus === "error") {
+    return <LoadFailurePanel title="Admin access could not be verified" message={authError || "The admin dashboard could not confirm your current session."} onRetry={() => window.location.reload()} />;
   }
 
   return (
@@ -62,7 +48,11 @@ export default function AdminDashboardPage() {
         </>
       }
     >
-      {analytics ? (
+      {analyticsLoading ? (
+        <LoadingPanel label="Loading analytics..." />
+      ) : analyticsError ? (
+        <LoadFailurePanel title="Unable to load analytics" message={analyticsError.message} />
+      ) : analytics ? (
         <>
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             <MotionReveal delay={0}>
@@ -182,11 +172,7 @@ export default function AdminDashboardPage() {
             </SectionCard>
           </div>
         </>
-      ) : loadError ? (
-        <LoadFailurePanel message={loadError} onRetry={() => window.location.reload()} />
-      ) : (
-        <LoadingPanel label="Fetching institute analytics..." />
-      )}
+      ) : null}
     </DashboardLayout>
   );
 }

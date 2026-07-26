@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
 import { supabase } from "../config/db.js";
-import { getStudentAnalytics } from "../services/analytics/analyticsService.js";
+import { getStudentAnalytics, getStudentsAnalytics } from "../services/analytics/analyticsService.js";
 import { recordAuditEventFromRequest } from "../services/audit/auditService.js";
 import { generateParentRecommendations } from "../services/ai/recommendationService.js";
 import { settleNonCriticalTasks } from "../services/ops/sideEffects.js";
@@ -39,17 +39,20 @@ export async function getParentDashboard(req: Request, res: Response): Promise<v
     .map((item) => String(item))
     .filter((item): item is string => Boolean(item));
 
-  const analytics = await Promise.all(linkedIds.map((studentId) => getStudentAnalytics(studentId)));
+  const analyticsMap = await getStudentsAnalytics(linkedIds);
+  const { data: students } = await supabase.from("users").select("id, name, class").in("id", linkedIds);
+  const studentMap = new Map((students || []).map((s) => [String(s.id), s]));
 
   const studentSummaries = await Promise.all(
-    linkedIds.map(async (studentId, index) => {
-      const { data: student } = await supabase.from("users").select("name, class").eq("id", studentId).maybeSingle();
+    linkedIds.map(async (studentId) => {
+      const student = studentMap.get(studentId);
+      const analytics = analyticsMap.get(studentId);
       return {
         id: studentId,
         name: student?.name ?? "Student",
         class: student?.class,
-        analytics: analytics[index],
-        recommendations: await generateParentRecommendations(analytics[index])
+        analytics,
+        recommendations: await generateParentRecommendations(analytics)
       };
     })
   );

@@ -7,6 +7,7 @@ import { RoleBadge } from "@/components/RoleBadge";
 import { SectionCard } from "@/components/SectionCard";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
+import { useApi } from "@/hooks/useApi";
 import { apiFetch } from "@/utils/api";
 import type { ManagedUser, PaginationMeta, ProvisioningResult } from "@/utils/types";
 
@@ -71,8 +72,6 @@ export default function AdminUsersPage() {
   const router = useRouter();
   const auth = useRequireAuth(["admin"]);
   const { user, status, error } = auth;
-  const [users, setUsers] = useState<ManagedUser[]>([]);
-  const [studentOptions, setStudentOptions] = useState<ManagedUser[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta>(emptyPagination);
   const [message, setMessage] = useState("");
   const [inviteLink, setInviteLink] = useState("");
@@ -83,51 +82,48 @@ export default function AdminUsersPage() {
   const [form, setForm] = useState<UserFormState>(emptyFormState);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [loadError, setLoadError] = useState("");
   const [statusUpdatingUserId, setStatusUpdatingUserId] = useState<string | null>(null);
   const formSectionRef = useRef<HTMLDivElement | null>(null);
 
-  async function loadUsers(page = pagination.page || 1, nextSearch = search, nextRole = filterRole) {
-    setLoadingUsers(true);
-    setLoadError("");
+  const {
+    data: userResult,
+    error: usersError,
+    isLoading: loadingUsers,
+    mutate: mutateUsers
+  } = useApi<{ users: ManagedUser[]; pagination: PaginationMeta }>(
+    status === "authenticated"
+      ? `/admin/users?page=${pagination.page || 1}&pageSize=20${search.trim() ? `&search=${search.trim()}` : ""}${
+          filterRole !== "all" ? `&role=${filterRole}` : ""
+        }`
+      : null
+  );
 
-    try {
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: "20"
-      });
+  const { data: studentResult } = useApi<{ students: ManagedUser[] }>(
+    status === "authenticated" ? `/admin/students?page=1&pageSize=50` : null
+  );
 
-      if (nextSearch.trim()) {
-        params.set("search", nextSearch.trim());
-      }
+  const users = userResult?.users || [];
+  const studentOptions = studentResult?.students || [];
 
-      if (nextRole !== "all") {
-        params.set("role", nextRole);
-      }
+  const handlePageChange = (newPage: number) => {
+    setPagination((prev) => ({ ...prev, page: newPage }));
+  };
 
-      const [userResult, studentResult] = await Promise.all([
-        apiFetch<{ users: ManagedUser[]; pagination: PaginationMeta }>(`/admin/users?${params.toString()}`),
-        apiFetch<{ students: ManagedUser[] }>(`/admin/students?page=1&pageSize=50`)
-      ]);
+  const handleSearchChange = (newSearch: string) => {
+    setSearch(newSearch);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
 
-      setUsers(userResult.users);
-      setPagination(userResult.pagination);
-      setStudentOptions(studentResult.students);
-    } catch (loadUsersError) {
-      setLoadError(loadUsersError instanceof Error ? loadUsersError.message : "Unable to load the user directory.");
-      setUsers([]);
-      setPagination(emptyPagination);
-    } finally {
-      setLoadingUsers(false);
-    }
-  }
+  const handleRoleChange = (newRole: FilterRole) => {
+    setFilterRole(newRole);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
 
   useEffect(() => {
-    if (status === "authenticated") {
-      void loadUsers(1, search, filterRole);
+    if (userResult?.pagination) {
+      setPagination(userResult.pagination);
     }
-  }, [status, search, filterRole]);
+  }, [userResult?.pagination]);
 
   useEffect(() => {
     if (!router.isReady || editingUserId) {
@@ -206,7 +202,7 @@ export default function AdminUsersPage() {
         body: JSON.stringify({ isActive: !managedUser.isActive })
       });
 
-      await loadUsers(pagination.page || 1);
+      await mutateUsers();
       setMessage(managedUser.isActive ? "User paused successfully." : "User reactivated successfully.");
     } catch (toggleError) {
       setMessage(toggleError instanceof Error ? toggleError.message : "Unable to update account status right now.");
@@ -265,7 +261,8 @@ export default function AdminUsersPage() {
         setInviteLink(result.setupUrl);
       }
 
-      await loadUsers(editingUserId ? pagination.page || 1 : 1);
+      if (!editingUserId) handlePageChange(1);
+      await mutateUsers();
       if (editingUserId) {
         resetForm();
       } else {
@@ -303,13 +300,13 @@ export default function AdminUsersPage() {
     );
   }
 
-  if (loadError && !loadingUsers) {
+  if (usersError && !loadingUsers) {
     return (
       <DashboardLayout
         title="User provisioning"
         subtitle="Create, update, pause, and link institute accounts from one coordinated admin surface."
       >
-        <LoadFailurePanel message={loadError} onRetry={() => void loadUsers(1, search, filterRole)} />
+        <LoadFailurePanel message={usersError.message} onRetry={() => void mutateUsers()} />
       </DashboardLayout>
     );
   }
@@ -665,7 +662,7 @@ export default function AdminUsersPage() {
                   <button
                     className="rounded-full border border-soft px-4 py-2 text-sm"
                     disabled={!pagination.hasPreviousPage}
-                    onClick={() => void loadUsers(pagination.page - 1)}
+                    onClick={() => handlePageChange(pagination.page - 1)}
                     type="button"
                   >
                     Previous
@@ -673,7 +670,7 @@ export default function AdminUsersPage() {
                   <button
                     className="rounded-full border border-soft px-4 py-2 text-sm"
                     disabled={!pagination.hasNextPage}
-                    onClick={() => void loadUsers(pagination.page + 1)}
+                    onClick={() => handlePageChange(pagination.page + 1)}
                     type="button"
                   >
                     Next

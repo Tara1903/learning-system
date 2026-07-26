@@ -91,55 +91,45 @@ export async function getStudentAnalytics(studentId: string) {
   return data ?? recalculateStudentAnalytics(studentId);
 }
 
-export async function buildInstituteAnalytics() {
-  const [
-    { data: users = [] },
-    { data: analytics = [] },
-    { count: attendanceCount },
-    { count: doubtCount }
-  ] = await Promise.all([
-    supabase.from('users').select('role'),
-    supabase.from('analytics').select('*'),
-    supabase.from('attendance').select('*', { count: 'exact', head: true }),
-    supabase.from('doubts').select('*', { count: 'exact', head: true })
-  ]);
-
-  const roleCounts = (users || []).reduce<Record<string, number>>((acc, user) => {
-    acc[user.role] = (acc[user.role] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  const averageAttendance =
-    (analytics || []).length > 0
-      ? Number(
-          ((analytics || []).reduce((sum, item: any) => sum + (item.attendance_percentage || item.attendancePercentage || 0), 0) / (analytics || []).length).toFixed(2)
-        )
-      : 0;
-
-  const weakTopicMap = new Map<string, number>();
-  (analytics || []).forEach((item: any) => {
-    (item.weak_topics || item.weakTopics || []).forEach((topic: WeakTopic) => {
-      weakTopicMap.set(topic.topic, (weakTopicMap.get(topic.topic) ?? 0) + 1);
+export async function getStudentsAnalytics(studentIds: string[]) {
+  if (!studentIds.length) return new Map();
+  const { data } = await supabase.from('analytics').select('*').in('student_id', studentIds);
+  
+  const analyticsMap = new Map((data || []).map((a: any) => [a.student_id, a]));
+  
+  const missingIds = studentIds.filter(id => !analyticsMap.has(id));
+  if (missingIds.length > 0) {
+    const results = await Promise.all(missingIds.map(id => recalculateStudentAnalytics(id)));
+    results.forEach((res, i) => {
+      if (res) analyticsMap.set(missingIds[i], res);
     });
-  });
+  }
+  
+  return analyticsMap;
+}
 
-  const topWeakTopics = Array.from(weakTopicMap.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
-    .map(([topic, count]) => ({ topic, count }));
+
+
+export async function buildInstituteAnalytics() {
+  const { data, error } = await supabase.rpc('get_institute_analytics');
+  
+  if (error || !data) {
+    // Fallback if RPC is not deployed yet
+    return {
+      roleCounts: {},
+      attendanceCount: 0,
+      doubtCount: 0,
+      averageAttendance: 0,
+      topWeakTopics: [],
+      atRiskStudents: 0
+    };
+  }
 
   return {
-    roleCounts,
-    attendanceCount,
-    doubtCount,
-    averageAttendance,
-    topWeakTopics,
-    atRiskStudents: (analytics || []).filter(
-      (item: any) => {
-        const att = item.attendance_percentage || item.attendancePercentage || 0;
-        const acc = item.practice_accuracy || item.practiceAccuracy || 0;
-        return att < 75 || (acc > 0 && acc < 60);
-      }
-    ).length
+    ...data,
+    topWeakTopics: (data as any).topWeakTopics?.map((t: any) => ({
+      topic: t.topic,
+      count: Number(t.score)
+    })) || []
   };
 }
