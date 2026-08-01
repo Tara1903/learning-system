@@ -10,7 +10,7 @@ export function useRequireAuth(roles?: UserRole[]) {
   const auth = useAuth();
 
   useEffect(() => {
-    if (auth.status === "anonymous") {
+    if (auth.status === "anonymous" || auth.status === "error") {
       void router.replace("/login");
       return;
     }

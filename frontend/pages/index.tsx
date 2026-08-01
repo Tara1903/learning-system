@@ -3,13 +3,14 @@ import { useEffect } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { routeForRole } from "@/utils/routes";
+import { LoadingPanel } from "@/components/LoadingPanel";
 
 export default function IndexPage() {
   const router = useRouter();
   const { user, status } = useAuth();
 
   useEffect(() => {
-    if (status === "anonymous") {
+    if (status === "anonymous" || status === "error") {
       void router.replace("/login");
     }
 
@@ -18,5 +19,5 @@ export default function IndexPage() {
     }
   }, [router, status, user]);
 
-  return null;
+  return <LoadingPanel label="Loading Adhyayan..." />;
 }

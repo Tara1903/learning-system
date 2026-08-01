@@ -44,16 +44,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       set({ user: result.user, features: result.features, status: "authenticated", error: null });
       return result.user;
     } catch (error) {
-      if (error instanceof ApiClientError && error.status === 401) {
-        set({ user: null, features: null, status: "anonymous", error: null });
-        return null;
-      }
-
       set({
         user: null,
         features: null,
-        status: "error",
-        error: error instanceof Error ? error.message : "Unable to verify your session right now."
+        status: "anonymous",
+        error: null
       });
       return null;
     }
