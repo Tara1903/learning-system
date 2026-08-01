@@ -156,3 +156,41 @@ export interface ApiEnvelope<T> {
   message?: string;
   data: T;
 }
+
+export interface Schedule {
+  id: string;
+  class: string;
+  subject: string;
+  teacher_id?: string;
+  teacher?: { name: string };
+  start_time: string;
+  end_time: string;
+  type: "regular" | "exam" | "holiday";
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FeeTransaction {
+  id: string;
+  fee_record_id: string;
+  amount: number;
+  payment_method: "cash" | "cheque" | "upi" | "bank_transfer";
+  payment_date: string;
+  recorded_by: string;
+  receipt_number?: string;
+  notes?: string;
+}
+
+export interface FeeRecord {
+  id: string;
+  student_id: string;
+  student?: { name: string; class: string };
+  title: string;
+  amount_due: number;
+  amount_paid: number;
+  due_date: string;
+  status: "pending" | "partial" | "paid";
+  transactions?: FeeTransaction[];
+  created_at?: string;
+  updated_at?: string;
+}

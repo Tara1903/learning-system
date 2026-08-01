@@ -12,6 +12,8 @@ export interface AuthUser {
   role: UserRole;
   name: string;
   tokenVersion: number;
+  class?: string;
+  linked_student_id?: string;
 }
 
 export interface WeakTopic {

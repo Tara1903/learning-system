@@ -223,7 +223,63 @@ CREATE INDEX idx_practice_sets_student_id_updated_at ON practice_sets(student_id
 CREATE TRIGGER update_practice_sets_updated_at
 BEFORE UPDATE ON practice_sets
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+-- 10. Schedules Table
+CREATE TABLE schedules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    class TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    teacher_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    type TEXT NOT NULL DEFAULT 'regular' CHECK (type IN ('regular', 'exam', 'holiday')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
+CREATE INDEX idx_schedules_class_start_time ON schedules(class, start_time);
+
+CREATE TRIGGER update_schedules_updated_at
+BEFORE UPDATE ON schedules
+FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+-- 11. Fee Records Table (Ledger balances)
+CREATE TABLE fee_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    amount_due DECIMAL(10, 2) NOT NULL,
+    amount_paid DECIMAL(10, 2) DEFAULT 0.00,
+    due_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'partial', 'paid')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_fee_records_student_id_due_date ON fee_records(student_id, due_date DESC);
+
+CREATE TRIGGER update_fee_records_updated_at
+BEFORE UPDATE ON fee_records
+FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+-- 12. Fee Transactions Table (Individual payments)
+CREATE TABLE fee_transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    fee_record_id UUID NOT NULL REFERENCES fee_records(id) ON DELETE CASCADE,
+    amount DECIMAL(10, 2) NOT NULL,
+    payment_method TEXT NOT NULL CHECK (payment_method IN ('cash', 'cheque', 'upi', 'bank_transfer')),
+    payment_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    recorded_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    receipt_number TEXT UNIQUE,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_fee_transactions_fee_record_id ON fee_transactions(fee_record_id);
+
+CREATE TRIGGER update_fee_transactions_updated_at
+BEFORE UPDATE ON fee_transactions
+FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON attendance(student_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_student_id ON analytics(student_id);
