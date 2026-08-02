@@ -19,7 +19,6 @@ export interface CurrentUser {
     gender?: string;
     schoolName?: string;
     board?: string;
-    previousPercentage?: string;
     fatherName?: string;
     motherName?: string;
     parentMobile?: string;
@@ -27,13 +26,7 @@ export interface CurrentUser {
     occupation?: string;
     address?: string;
     city?: string;
-    pinCode?: string;
-    subjectsToJoin?: string;
-    batchTiming?: string;
-    medium?: string;
-    weakSubjects?: string;
     tuitionStartDate?: string;
-    medicalCondition?: string;
     dateOfAdmission?: string;
     feesPlan?: string;
     discount?: string;

@@ -130,20 +130,12 @@ export default function StudentDashboardPage() {
                   <p className="font-medium">{dashboard.student.profile?.schoolName || "N/A"}</p>
                 </div>
                 <div className="rounded-[1.2rem] border border-soft p-4">
-                  <p className="text-xs text-muted mb-1">Board & Medium</p>
-                  <p className="font-medium">{dashboard.student.profile?.board || "N/A"} · {dashboard.student.profile?.medium || "N/A"}</p>
-                </div>
-                <div className="rounded-[1.2rem] border border-soft p-4">
-                  <p className="text-xs text-muted mb-1">Batch Timing</p>
-                  <p className="font-medium">{dashboard.student.profile?.batchTiming || "N/A"}</p>
+                  <p className="text-xs text-muted mb-1">Board</p>
+                  <p className="font-medium">{dashboard.student.profile?.board || "N/A"}</p>
                 </div>
                 <div className="rounded-[1.2rem] border border-soft p-4">
                   <p className="text-xs text-muted mb-1">Admission No</p>
                   <p className="font-medium">{dashboard.student.profile?.admissionNumber || "N/A"}</p>
-                </div>
-                <div className="rounded-[1.2rem] border border-soft p-4 md:col-span-2">
-                  <p className="text-xs text-[var(--danger)] mb-1">Weak Subjects Focus</p>
-                  <p className="font-medium">{dashboard.student.profile?.weakSubjects || "None specified"}</p>
                 </div>
               </div>
             </SectionCard>

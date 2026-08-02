@@ -62,6 +62,23 @@ body::before {
   pointer-events: none;
 }
 
+/* Native App Mobile Tweaks */
+@media (max-width: 768px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  
+  body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    overscroll-behavior-y: none;
+  }
+}
+
 * {
   box-sizing: border-box;
 }

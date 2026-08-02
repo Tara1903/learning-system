@@ -85,15 +85,6 @@ export default function ParentDashboardPage() {
                       </p>
                       
                       <div className="mt-2 text-xs font-medium text-text-main flex flex-wrap gap-2">
-                        {student.profile?.batchTiming && (
-                          <span className="rounded-md bg-surface-strong px-2 py-1">Batch: {student.profile.batchTiming}</span>
-                        )}
-                        {student.profile?.medium && (
-                          <span className="rounded-md bg-surface-strong px-2 py-1">Medium: {student.profile.medium}</span>
-                        )}
-                        {student.profile?.medicalCondition && (
-                          <span className="rounded-md bg-red-50 text-red-700 px-2 py-1">Medical: {student.profile.medicalCondition}</span>
-                        )}
                       </div>
 
                       <p className="mt-3 text-sm text-muted">

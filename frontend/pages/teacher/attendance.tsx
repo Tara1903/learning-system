@@ -48,32 +48,16 @@ export default function TeacherAttendancePage() {
     }
   }, [status]);
 
-  const [batchFilter, setBatchFilter] = useState("");
-  const [mediumFilter, setMediumFilter] = useState("");
-  
   const availableClasses = useMemo(
     () => Array.from(new Set(students.map((student) => student.class).filter(Boolean))).sort(),
     [students]
   );
-
-  const availableBatches = useMemo(
-    () => Array.from(new Set(students.map((student) => student.profile?.batchTiming).filter(Boolean))).sort(),
-    [students]
-  );
-
-  const availableMediums = useMemo(
-    () => Array.from(new Set(students.map((student) => student.profile?.medium).filter(Boolean))).sort(),
-    [students]
-  );
-
   const visibleStudents = useMemo(
     () => students.filter((student) => {
       if (classFilter && student.class !== classFilter) return false;
-      if (batchFilter && student.profile?.batchTiming !== batchFilter) return false;
-      if (mediumFilter && student.profile?.medium !== mediumFilter) return false;
       return true;
     }),
-    [classFilter, batchFilter, mediumFilter, students]
+    [classFilter, students]
   );
 
   if (!user || status === "loading" || status === "idle") {
@@ -153,36 +137,6 @@ export default function TeacherAttendancePage() {
                       Class {className}
                     </button>
                   ))}
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p className="mb-2 text-sm font-medium">Batch Timing</p>
-                  <select
-                    value={batchFilter}
-                    onChange={(e) => setBatchFilter(e.target.value)}
-                    className="w-full rounded-[1.1rem] border border-soft bg-surface-strong px-4 py-2 text-sm outline-none"
-                  >
-                    <option value="">All Batches</option>
-                    {availableBatches.map(batch => (
-                      <option key={batch as string} value={batch as string}>{batch as string}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <p className="mb-2 text-sm font-medium">Medium</p>
-                  <select
-                    value={mediumFilter}
-                    onChange={(e) => setMediumFilter(e.target.value)}
-                    className="w-full rounded-[1.1rem] border border-soft bg-surface-strong px-4 py-2 text-sm outline-none"
-                  >
-                    <option value="">All Mediums</option>
-                    {availableMediums.map(medium => (
-                      <option key={medium as string} value={medium as string}>{medium as string}</option>
-                    ))}
-                  </select>
                 </div>
               </div>
             </div>
