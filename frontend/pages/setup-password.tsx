@@ -3,7 +3,7 @@ import { AlertCircle, LockKeyhole } from "lucide-react";
 import { useRouter } from "next/router";
 import { FormEvent, useMemo, useState } from "react";
 
-import { BrandPanel } from "@/components/BrandPanel";
+
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuthStore } from "@/store/auth-store";
 import { apiFetch } from "@/utils/api";
@@ -50,9 +50,13 @@ export default function SetupPasswordPage() {
         <ThemeToggle />
       </div>
 
-      <div className="mx-auto grid max-w-[1500px] gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <BrandPanel />
-        <div className="app-shell-card rounded-[2rem] p-6 md:p-8">
+      <div className="mx-auto flex max-w-md flex-col justify-center pt-8 md:pt-16">
+        <div className="mb-8 text-center">
+          <h1 className="font-bold text-2xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] uppercase">
+            ADHYAYAN BRILLIANT CLASSES
+          </h1>
+        </div>
+        <div className="app-shell-card rounded-[2rem] p-6 md:p-8 w-full">
           <p className="text-xs uppercase tracking-[0.28em] text-muted">Account activation</p>
           <h1 className="heading-serif mt-4 text-4xl">Set your password</h1>
           <p className="mt-4 text-sm leading-7 text-muted">

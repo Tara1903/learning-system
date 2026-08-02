@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/router";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
-import { BrandPanel } from "@/components/BrandPanel";
+
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/auth-store";
@@ -62,8 +62,12 @@ export default function LoginPage() {
         <ThemeToggle />
       </div>
 
-      <div className="mx-auto grid max-w-[1500px] gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <BrandPanel />
+      <div className="mx-auto flex max-w-md flex-col justify-center pt-8 md:pt-16">
+        <div className="mb-8 text-center">
+          <h1 className="font-bold text-2xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] uppercase">
+            ADHYAYAN BRILLIANT CLASSES
+          </h1>
+        </div>
 
         <motion.div
           className="app-shell-card rounded-[2rem] p-6 md:p-8"
