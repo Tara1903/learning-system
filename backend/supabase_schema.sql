@@ -14,11 +14,11 @@ DROP TABLE IF EXISTS attendance CASCADE;
 DROP TABLE IF EXISTS analytics CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
--- Trigger function for updated_at
+-- Trigger function for "updatedAt"
 CREATE OR REPLACE FUNCTION update_modified_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = NOW();
+    NEW."updatedAt" = NOW();
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -31,137 +31,137 @@ CREATE TABLE users (
     password TEXT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('admin', 'teacher', 'student', 'parent')),
     class TEXT,
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
-    linked_student_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    linked_student_ids UUID[] DEFAULT '{}',
-    is_active BOOLEAN DEFAULT true,
-    token_version INTEGER DEFAULT 0,
-    failed_login_attempts INTEGER DEFAULT 0,
-    locked_until TIMESTAMP WITH TIME ZONE,
-    last_login_at TIMESTAMP WITH TIME ZONE,
+    "createdBy" UUID REFERENCES users(id) ON DELETE SET NULL,
+    "linkedStudentId" UUID REFERENCES users(id) ON DELETE SET NULL,
+    "linkedStudentIds" UUID[] DEFAULT '{}',
+    "isActive" BOOLEAN DEFAULT true,
+    "tokenVersion" INTEGER DEFAULT 0,
+    "failedLoginAttempts" INTEGER DEFAULT 0,
+    "lockedUntil" TIMESTAMP WITH TIME ZONE,
+    "lastLoginAt" TIMESTAMP WITH TIME ZONE,
     profile JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE INDEX idx_users_role_class_name ON users(role, class, name);
-CREATE INDEX idx_users_linked_student_ids ON users USING GIN(linked_student_ids);
+CREATE INDEX idx_users_"linkedStudentIds" ON users USING GIN("linkedStudentIds");
 
-CREATE TRIGGER update_users_updated_at
+CREATE TRIGGER update_users_"updatedAt"
 BEFORE UPDATE ON users
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- 2. Analytics Table
 CREATE TABLE analytics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-    weak_topics JSONB DEFAULT '[]'::jsonb,
-    doubt_count INTEGER DEFAULT 0,
-    attendance_percentage REAL DEFAULT 0,
-    practice_accuracy REAL DEFAULT 0,
-    last_activity_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    "studentId" UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    "weakTopics" JSONB DEFAULT '[]'::jsonb,
+    "doubtCount" INTEGER DEFAULT 0,
+    "attendancePercentage" REAL DEFAULT 0,
+    "practiceAccuracy" REAL DEFAULT 0,
+    "lastActivityAt" TIMESTAMP WITH TIME ZONE,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TRIGGER update_analytics_updated_at
+CREATE TRIGGER update_analytics_"updatedAt"
 BEFORE UPDATE ON analytics
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- 3. Attendance Table
 CREATE TABLE attendance (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "studentId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     class TEXT NOT NULL,
     date TIMESTAMP WITH TIME ZONE NOT NULL,
     status TEXT NOT NULL CHECK(status IN ('present', 'absent', 'late')),
-    marked_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(student_id, date)
+    "markedBy" UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE("studentId", date)
 );
 
-CREATE TRIGGER update_attendance_updated_at
+CREATE TRIGGER update_attendance_"updatedAt"
 BEFORE UPDATE ON attendance
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- 4. AuditLog Table
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    actor_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    actor_role TEXT CHECK (actor_role IN ('admin', 'teacher', 'student', 'parent')),
+    "actorId" UUID REFERENCES users(id) ON DELETE SET NULL,
+    "actorRole" TEXT CHECK ("actorRole" IN ('admin', 'teacher', 'student', 'parent')),
     action TEXT NOT NULL,
-    entity_type TEXT NOT NULL,
-    entity_id TEXT,
-    target_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    ip_address TEXT,
-    user_agent TEXT,
-    request_id TEXT,
+    "entityType" TEXT NOT NULL,
+    "entityId" TEXT,
+    "targetUserId" UUID REFERENCES users(id) ON DELETE SET NULL,
+    "ipAddress" TEXT,
+    "userAgent" TEXT,
+    "requestId" TEXT,
     details JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_audit_logs_actor_id ON audit_logs(actor_id);
+CREATE INDEX idx_audit_logs_"actorId" ON audit_logs("actorId");
 CREATE INDEX idx_audit_logs_action ON audit_logs(action);
-CREATE INDEX idx_audit_logs_entity_type ON audit_logs(entity_type);
-CREATE INDEX idx_audit_logs_target_user_id ON audit_logs(target_user_id);
-CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at DESC);
+CREATE INDEX idx_audit_logs_"entityType" ON audit_logs("entityType");
+CREATE INDEX idx_audit_logs_"targetUserId" ON audit_logs("targetUserId");
+CREATE INDEX idx_audit_logs_"createdAt" ON audit_logs("createdAt" DESC);
 
-CREATE TRIGGER update_audit_logs_updated_at
+CREATE TRIGGER update_audit_logs_"updatedAt"
 BEFORE UPDATE ON audit_logs
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- 5. AuthToken Table
 CREATE TABLE auth_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type TEXT NOT NULL CHECK(type IN ('invite', 'password-reset')),
-    token_hash TEXT NOT NULL UNIQUE,
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    used_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    "tokenHash" TEXT NOT NULL UNIQUE,
+    "createdBy" UUID REFERENCES users(id) ON DELETE SET NULL,
+    "expiresAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+    "usedAt" TIMESTAMP WITH TIME ZONE,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_auth_tokens_user_id ON auth_tokens(user_id);
+CREATE INDEX idx_auth_tokens_"userId" ON auth_tokens("userId");
 CREATE INDEX idx_auth_tokens_type ON auth_tokens(type);
-CREATE INDEX idx_auth_tokens_expires_at ON auth_tokens(expires_at);
+CREATE INDEX idx_auth_tokens_"expiresAt" ON auth_tokens("expiresAt");
 
-CREATE TRIGGER update_auth_tokens_updated_at
+CREATE TRIGGER update_auth_tokens_"updatedAt"
 BEFORE UPDATE ON auth_tokens
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- 6. UploadAsset Table
 CREATE TABLE upload_assets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    owner_role TEXT NOT NULL CHECK (owner_role IN ('admin', 'teacher', 'student', 'parent')),
+    "ownerId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "ownerRole" TEXT NOT NULL CHECK ("ownerRole" IN ('admin', 'teacher', 'student', 'parent')),
     category TEXT NOT NULL CHECK (category IN ('images', 'audio')),
-    storage_driver TEXT NOT NULL CHECK (storage_driver IN ('local', 's3')),
-    storage_key TEXT NOT NULL,
-    absolute_path TEXT,
-    mime_type TEXT NOT NULL,
-    original_file_name TEXT NOT NULL,
-    file_name TEXT NOT NULL,
-    byte_size BIGINT NOT NULL,
+    "storageDriver" TEXT NOT NULL CHECK ("storageDriver" IN ('local', 's3')),
+    "storageKey" TEXT NOT NULL,
+    "absolutePath" TEXT,
+    "mimeType" TEXT NOT NULL,
+    "originalFileName" TEXT NOT NULL,
+    "fileName" TEXT NOT NULL,
+    "byteSize" BIGINT NOT NULL,
     transcript TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_upload_assets_owner_id_created_at ON upload_assets(owner_id, created_at DESC);
+CREATE INDEX idx_upload_assets_"ownerId"_"createdAt" ON upload_assets("ownerId", "createdAt" DESC);
 CREATE INDEX idx_upload_assets_category ON upload_assets(category);
 
-CREATE TRIGGER update_upload_assets_updated_at
+CREATE TRIGGER update_upload_assets_"updatedAt"
 BEFORE UPDATE ON upload_assets
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- 7. Doubt Table
 CREATE TABLE doubts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "studentId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     question TEXT NOT NULL,
     subject TEXT NOT NULL,
     class TEXT NOT NULL,
@@ -169,58 +169,58 @@ CREATE TABLE doubts (
     mode TEXT DEFAULT 'hint' CHECK(mode IN ('hint', 'step-by-step', 'simplify', 'reveal-answer')),
     messages JSONB DEFAULT '[]'::jsonb,
     attachments JSONB DEFAULT '[]'::jsonb,
-    voice_transcript TEXT,
-    weak_topic_tags TEXT[] DEFAULT '{}',
-    resolved_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    "voiceTranscript" TEXT,
+    "weakTopicTags" TEXT[] DEFAULT '{}',
+    "resolvedAt" TIMESTAMP WITH TIME ZONE,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_doubts_student_id_updated_at ON doubts(student_id, updated_at DESC);
+CREATE INDEX idx_doubts_"studentId"_"updatedAt" ON doubts("studentId", "updatedAt" DESC);
 
-CREATE TRIGGER update_doubts_updated_at
+CREATE TRIGGER update_doubts_"updatedAt"
 BEFORE UPDATE ON doubts
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- 8. Notification Table
 CREATE TABLE notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "recipientId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type TEXT NOT NULL,
     title TEXT NOT NULL,
     message TEXT NOT NULL,
     read BOOLEAN DEFAULT false,
-    related_entity_type TEXT,
-    related_entity_id UUID,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    related_"entityType" TEXT,
+    related_"entityId" UUID,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_notifications_recipient_read_created ON notifications(recipient_id, read, created_at DESC);
+CREATE INDEX idx_notifications_recipient_read_created ON notifications("recipientId", read, "createdAt" DESC);
 
-CREATE TRIGGER update_notifications_updated_at
+CREATE TRIGGER update_notifications_"updatedAt"
 BEFORE UPDATE ON notifications
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- 9. PracticeSet Table
 CREATE TABLE practice_sets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "studentId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     subject TEXT NOT NULL,
-    topic_tags TEXT[] DEFAULT '{}',
+    "topicTags" TEXT[] DEFAULT '{}',
     questions JSONB DEFAULT '[]'::jsonb,
-    completion_rate REAL DEFAULT 0,
-    accuracy_percentage REAL DEFAULT 0,
-    completed_questions INTEGER DEFAULT 0,
-    completed_at TIMESTAMP WITH TIME ZONE,
-    last_attempted_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    "completionRate" REAL DEFAULT 0,
+    "accuracyPercentage" REAL DEFAULT 0,
+    "completedQuestions" INTEGER DEFAULT 0,
+    "completedAt" TIMESTAMP WITH TIME ZONE,
+    "lastAttemptedAt" TIMESTAMP WITH TIME ZONE,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_practice_sets_student_id_updated_at ON practice_sets(student_id, updated_at DESC);
+CREATE INDEX idx_practice_sets_"studentId"_"updatedAt" ON practice_sets("studentId", "updatedAt" DESC);
 
-CREATE TRIGGER update_practice_sets_updated_at
+CREATE TRIGGER update_practice_sets_"updatedAt"
 BEFORE UPDATE ON practice_sets
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 -- 10. Schedules Table
@@ -228,62 +228,62 @@ CREATE TABLE schedules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     class TEXT NOT NULL,
     subject TEXT NOT NULL,
-    teacher_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    "teacherId" UUID REFERENCES users(id) ON DELETE SET NULL,
+    "startTime" TIMESTAMP WITH TIME ZONE NOT NULL,
+    "endTime" TIMESTAMP WITH TIME ZONE NOT NULL,
     type TEXT NOT NULL DEFAULT 'regular' CHECK (type IN ('regular', 'exam', 'holiday')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_schedules_class_start_time ON schedules(class, start_time);
+CREATE INDEX idx_schedules_class_"startTime" ON schedules(class, "startTime");
 
-CREATE TRIGGER update_schedules_updated_at
+CREATE TRIGGER update_schedules_"updatedAt"
 BEFORE UPDATE ON schedules
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- 11. Fee Records Table (Ledger balances)
 CREATE TABLE fee_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "studentId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
-    amount_due DECIMAL(10, 2) NOT NULL,
-    amount_paid DECIMAL(10, 2) DEFAULT 0.00,
-    due_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    "amountDue" DECIMAL(10, 2) NOT NULL,
+    "amountPaid" DECIMAL(10, 2) DEFAULT 0.00,
+    "dueDate" TIMESTAMP WITH TIME ZONE NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'partial', 'paid')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_fee_records_student_id_due_date ON fee_records(student_id, due_date DESC);
+CREATE INDEX idx_fee_records_"studentId"_"dueDate" ON fee_records("studentId", "dueDate" DESC);
 
-CREATE TRIGGER update_fee_records_updated_at
+CREATE TRIGGER update_fee_records_"updatedAt"
 BEFORE UPDATE ON fee_records
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- 12. Fee Transactions Table (Individual payments)
 CREATE TABLE fee_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    fee_record_id UUID NOT NULL REFERENCES fee_records(id) ON DELETE CASCADE,
+    "feeRecordId" UUID NOT NULL REFERENCES fee_records(id) ON DELETE CASCADE,
     amount DECIMAL(10, 2) NOT NULL,
-    payment_method TEXT NOT NULL CHECK (payment_method IN ('cash', 'cheque', 'upi', 'bank_transfer')),
-    payment_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    recorded_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-    receipt_number TEXT UNIQUE,
+    "paymentMethod" TEXT NOT NULL CHECK ("paymentMethod" IN ('cash', 'cheque', 'upi', 'bank_transfer')),
+    "paymentDate" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "recordedBy" UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    "receiptNumber" TEXT UNIQUE,
     notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_fee_transactions_fee_record_id ON fee_transactions(fee_record_id);
+CREATE INDEX idx_fee_transactions_"feeRecordId" ON fee_transactions("feeRecordId");
 
-CREATE TRIGGER update_fee_transactions_updated_at
+CREATE TRIGGER update_fee_transactions_"updatedAt"
 BEFORE UPDATE ON fee_transactions
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 -- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON attendance(student_id);
-CREATE INDEX IF NOT EXISTS idx_analytics_student_id ON analytics(student_id);
-CREATE INDEX IF NOT EXISTS idx_doubts_resolved_at ON doubts(resolved_at);
+CREATE INDEX IF NOT EXISTS idx_attendance_"studentId" ON attendance("studentId");
+CREATE INDEX IF NOT EXISTS idx_analytics_"studentId" ON analytics("studentId");
+CREATE INDEX IF NOT EXISTS idx_doubts_"resolvedAt" ON doubts("resolvedAt");
 
 -- 10. RPCs for Analytics Aggregation
 CREATE OR REPLACE FUNCTION get_institute_analytics()
@@ -292,39 +292,39 @@ DECLARE
     role_counts JSON;
     avg_attendance REAL;
     at_risk_students INTEGER;
-    top_weak_topics JSON;
+    top_"weakTopics" JSON;
     attendance_count BIGINT;
-    doubt_count BIGINT;
+    "doubtCount" BIGINT;
 BEGIN
     SELECT json_object_agg(role, count) INTO role_counts
     FROM (SELECT role, COUNT(*) as count FROM users GROUP BY role) t;
 
-    SELECT COALESCE(AVG(attendance_percentage), 0) INTO avg_attendance
+    SELECT COALESCE(AVG("attendancePercentage"), 0) INTO avg_attendance
     FROM analytics;
 
     SELECT COUNT(*) INTO at_risk_students
     FROM analytics
-    WHERE attendance_percentage < 75 OR (practice_accuracy > 0 AND practice_accuracy < 60);
+    WHERE "attendancePercentage" < 75 OR ("practiceAccuracy" > 0 AND "practiceAccuracy" < 60);
 
-    SELECT json_agg(row_to_json(t)) INTO top_weak_topics
+    SELECT json_agg(row_to_json(t)) INTO top_"weakTopics"
     FROM (
         SELECT topic_val->>'topic' as topic, SUM((topic_val->>'confidence')::numeric) as score
-        FROM analytics, jsonb_array_elements(weak_topics) as topic_val
+        FROM analytics, jsonb_array_elements("weakTopics") as topic_val
         GROUP BY topic_val->>'topic'
         ORDER BY score DESC
         LIMIT 6
     ) t;
 
     SELECT COUNT(*) INTO attendance_count FROM attendance;
-    SELECT COUNT(*) INTO doubt_count FROM doubts;
+    SELECT COUNT(*) INTO "doubtCount" FROM doubts;
 
     RETURN json_build_object(
         'roleCounts', COALESCE(role_counts, '{}'::json),
         'averageAttendance', avg_attendance,
         'atRiskStudents', at_risk_students,
-        'topWeakTopics', COALESCE(top_weak_topics, '[]'::json),
+        'topWeakTopics', COALESCE(top_"weakTopics", '[]'::json),
         'attendanceCount', attendance_count,
-        'doubtCount', doubt_count
+        'doubtCount', "doubtCount"
     );
 END;
 $$ LANGUAGE plpgsql;

@@ -24,11 +24,15 @@ export async function ensureSeedAdmin(): Promise<void> {
 
   const password = await bcrypt.hash(env.seedAdminPassword, 10);
 
-  await supabase.from("users").insert({
+  const { error } = await supabase.from("users").insert({
     name: env.seedAdminName,
     email: env.seedAdminEmail,
     password,
     role: "admin",
     isActive: true
   });
+
+  if (error) {
+    throw new Error(`Failed to bootstrap seed admin: ${error.message}`);
+  }
 }
