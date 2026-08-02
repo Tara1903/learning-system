@@ -12,7 +12,39 @@ const userProfileSchema = z
     phone: z.string().trim().max(30).optional().or(z.literal("")),
     section: z.string().trim().max(30).optional().or(z.literal("")),
     admissionNumber: z.string().trim().max(50).optional().or(z.literal("")),
-    guardianName: z.string().trim().max(120).optional().or(z.literal(""))
+    guardianName: z.string().trim().max(120).optional().or(z.literal("")),
+
+    photoUrl: z.string().trim().optional().or(z.literal("")),
+    dob: z.string().trim().optional().or(z.literal("")),
+    gender: z.string().trim().optional().or(z.literal("")),
+    schoolName: z.string().trim().optional().or(z.literal("")),
+    board: z.string().trim().optional().or(z.literal("")),
+    previousPercentage: z.string().trim().optional().or(z.literal("")),
+
+    fatherName: z.string().trim().max(120).optional().or(z.literal("")),
+    motherName: z.string().trim().max(120).optional().or(z.literal("")),
+    parentMobile: z.string().trim().max(30).optional().or(z.literal("")),
+    whatsappNumber: z.string().trim().max(30).optional().or(z.literal("")),
+    occupation: z.string().trim().max(120).optional().or(z.literal("")),
+
+    address: z.string().trim().optional().or(z.literal("")),
+    city: z.string().trim().optional().or(z.literal("")),
+    pinCode: z.string().trim().max(20).optional().or(z.literal("")),
+
+    subjectsToJoin: z.string().trim().optional().or(z.literal("")),
+    batchTiming: z.string().trim().optional().or(z.literal("")),
+    medium: z.string().trim().optional().or(z.literal("")),
+    weakSubjects: z.string().trim().optional().or(z.literal("")),
+    tuitionStartDate: z.string().trim().optional().or(z.literal("")),
+
+    medicalCondition: z.string().trim().optional().or(z.literal("")),
+
+    dateOfAdmission: z.string().trim().optional().or(z.literal("")),
+    feesPlan: z.string().trim().optional().or(z.literal("")),
+    discount: z.string().trim().optional().or(z.literal("")),
+    registrationFee: z.string().trim().optional().or(z.literal("")),
+    receiptNo: z.string().trim().optional().or(z.literal("")),
+    customStudentId: z.string().trim().optional().or(z.literal(""))
   })
   .optional();
 

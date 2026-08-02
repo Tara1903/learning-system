@@ -13,6 +13,32 @@ export interface UserProfile {
   section?: string;
   admissionNumber?: string;
   guardianName?: string;
+  photoUrl?: string;
+  dob?: string;
+  gender?: string;
+  schoolName?: string;
+  board?: string;
+  previousPercentage?: string;
+  fatherName?: string;
+  motherName?: string;
+  parentMobile?: string;
+  whatsappNumber?: string;
+  occupation?: string;
+  address?: string;
+  city?: string;
+  pinCode?: string;
+  subjectsToJoin?: string;
+  batchTiming?: string;
+  medium?: string;
+  weakSubjects?: string;
+  tuitionStartDate?: string;
+  medicalCondition?: string;
+  dateOfAdmission?: string;
+  feesPlan?: string;
+  discount?: string;
+  registrationFee?: string;
+  receiptNo?: string;
+  customStudentId?: string;
 }
 
 interface AdminUserListQuery {
@@ -60,7 +86,33 @@ function normalizeProfile(rawProfile: unknown): UserProfile | undefined {
     phone: normalizeOptionalText(profile.phone),
     section: normalizeOptionalText(profile.section),
     admissionNumber: normalizeOptionalText(profile.admissionNumber),
-    guardianName: normalizeOptionalText(profile.guardianName)
+    guardianName: normalizeOptionalText(profile.guardianName),
+    photoUrl: normalizeOptionalText(profile.photoUrl),
+    dob: normalizeOptionalText(profile.dob),
+    gender: normalizeOptionalText(profile.gender),
+    schoolName: normalizeOptionalText(profile.schoolName),
+    board: normalizeOptionalText(profile.board),
+    previousPercentage: normalizeOptionalText(profile.previousPercentage),
+    fatherName: normalizeOptionalText(profile.fatherName),
+    motherName: normalizeOptionalText(profile.motherName),
+    parentMobile: normalizeOptionalText(profile.parentMobile),
+    whatsappNumber: normalizeOptionalText(profile.whatsappNumber),
+    occupation: normalizeOptionalText(profile.occupation),
+    address: normalizeOptionalText(profile.address),
+    city: normalizeOptionalText(profile.city),
+    pinCode: normalizeOptionalText(profile.pinCode),
+    subjectsToJoin: normalizeOptionalText(profile.subjectsToJoin),
+    batchTiming: normalizeOptionalText(profile.batchTiming),
+    medium: normalizeOptionalText(profile.medium),
+    weakSubjects: normalizeOptionalText(profile.weakSubjects),
+    tuitionStartDate: normalizeOptionalText(profile.tuitionStartDate),
+    medicalCondition: normalizeOptionalText(profile.medicalCondition),
+    dateOfAdmission: normalizeOptionalText(profile.dateOfAdmission),
+    feesPlan: normalizeOptionalText(profile.feesPlan),
+    discount: normalizeOptionalText(profile.discount),
+    registrationFee: normalizeOptionalText(profile.registrationFee),
+    receiptNo: normalizeOptionalText(profile.receiptNo),
+    customStudentId: normalizeOptionalText(profile.customStudentId)
   };
 
   return Object.values(normalizedProfile).some(Boolean) ? normalizedProfile : undefined;

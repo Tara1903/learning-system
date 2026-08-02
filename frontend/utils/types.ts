@@ -14,6 +14,32 @@ export interface CurrentUser {
     section?: string;
     admissionNumber?: string;
     guardianName?: string;
+    photoUrl?: string;
+    dob?: string;
+    gender?: string;
+    schoolName?: string;
+    board?: string;
+    previousPercentage?: string;
+    fatherName?: string;
+    motherName?: string;
+    parentMobile?: string;
+    whatsappNumber?: string;
+    occupation?: string;
+    address?: string;
+    city?: string;
+    pinCode?: string;
+    subjectsToJoin?: string;
+    batchTiming?: string;
+    medium?: string;
+    weakSubjects?: string;
+    tuitionStartDate?: string;
+    medicalCondition?: string;
+    dateOfAdmission?: string;
+    feesPlan?: string;
+    discount?: string;
+    registrationFee?: string;
+    receiptNo?: string;
+    customStudentId?: string;
   };
 }
 

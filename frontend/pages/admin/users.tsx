@@ -26,6 +26,32 @@ interface UserFormState {
     section: string;
     admissionNumber: string;
     guardianName: string;
+    photoUrl: string;
+    dob: string;
+    gender: string;
+    schoolName: string;
+    board: string;
+    previousPercentage: string;
+    fatherName: string;
+    motherName: string;
+    parentMobile: string;
+    whatsappNumber: string;
+    occupation: string;
+    address: string;
+    city: string;
+    pinCode: string;
+    subjectsToJoin: string;
+    batchTiming: string;
+    medium: string;
+    weakSubjects: string;
+    tuitionStartDate: string;
+    medicalCondition: string;
+    dateOfAdmission: string;
+    feesPlan: string;
+    discount: string;
+    registrationFee: string;
+    receiptNo: string;
+    customStudentId: string;
   };
 }
 
@@ -39,7 +65,33 @@ const emptyFormState: UserFormState = {
     phone: "",
     section: "",
     admissionNumber: "",
-    guardianName: ""
+    guardianName: "",
+    photoUrl: "",
+    dob: "",
+    gender: "",
+    schoolName: "",
+    board: "",
+    previousPercentage: "",
+    fatherName: "",
+    motherName: "",
+    parentMobile: "",
+    whatsappNumber: "",
+    occupation: "",
+    address: "",
+    city: "",
+    pinCode: "",
+    subjectsToJoin: "",
+    batchTiming: "",
+    medium: "",
+    weakSubjects: "",
+    tuitionStartDate: "",
+    medicalCondition: "",
+    dateOfAdmission: "",
+    feesPlan: "",
+    discount: "",
+    registrationFee: "",
+    receiptNo: "",
+    customStudentId: ""
   }
 };
 
@@ -63,7 +115,33 @@ function toFormState(user: ManagedUser): UserFormState {
       phone: user.profile?.phone ?? "",
       section: user.profile?.section ?? "",
       admissionNumber: user.profile?.admissionNumber ?? "",
-      guardianName: user.profile?.guardianName ?? ""
+      guardianName: user.profile?.guardianName ?? "",
+      photoUrl: user.profile?.photoUrl ?? "",
+      dob: user.profile?.dob ?? "",
+      gender: user.profile?.gender ?? "",
+      schoolName: user.profile?.schoolName ?? "",
+      board: user.profile?.board ?? "",
+      previousPercentage: user.profile?.previousPercentage ?? "",
+      fatherName: user.profile?.fatherName ?? "",
+      motherName: user.profile?.motherName ?? "",
+      parentMobile: user.profile?.parentMobile ?? "",
+      whatsappNumber: user.profile?.whatsappNumber ?? "",
+      occupation: user.profile?.occupation ?? "",
+      address: user.profile?.address ?? "",
+      city: user.profile?.city ?? "",
+      pinCode: user.profile?.pinCode ?? "",
+      subjectsToJoin: user.profile?.subjectsToJoin ?? "",
+      batchTiming: user.profile?.batchTiming ?? "",
+      medium: user.profile?.medium ?? "",
+      weakSubjects: user.profile?.weakSubjects ?? "",
+      tuitionStartDate: user.profile?.tuitionStartDate ?? "",
+      medicalCondition: user.profile?.medicalCondition ?? "",
+      dateOfAdmission: user.profile?.dateOfAdmission ?? "",
+      feesPlan: user.profile?.feesPlan ?? "",
+      discount: user.profile?.discount ?? "",
+      registrationFee: user.profile?.registrationFee ?? "",
+      receiptNo: user.profile?.receiptNo ?? "",
+      customStudentId: user.profile?.customStudentId ?? ""
     }
   };
 }
@@ -417,75 +495,150 @@ export default function AdminUsersPage() {
             </div>
 
             {formRole === "student" ? (
-              <input
-                className="w-full rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none"
-                onChange={(event) => setForm((current) => ({ ...current, class: event.target.value }))}
-                placeholder="Class e.g. 8"
-                value={form.class}
-              />
-            ) : null}
+              <div className="space-y-6">
+                <div className="rounded-[1.2rem] border border-soft p-5">
+                  <p className="mb-4 text-xs uppercase tracking-[0.2em] text-[var(--accent)] font-semibold">1. Personal Details</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, dob: e.target.value}}))} placeholder="Date of Birth" value={form.profile.dob} />
+                    <select className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, gender: e.target.value}}))} value={form.profile.gender}>
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none md:col-span-2" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, photoUrl: e.target.value}}))} placeholder="Photo URL (Optional)" value={form.profile.photoUrl} />
+                  </div>
+                </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <input
-                className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none"
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    profile: {
-                      ...current.profile,
-                      phone: event.target.value
-                    }
-                  }))
-                }
-                placeholder="Phone number"
-                value={form.profile.phone}
-              />
-              <input
-                className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none"
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    profile: {
-                      ...current.profile,
-                      guardianName: event.target.value
-                    }
-                  }))
-                }
-                placeholder="Guardian or contact name"
-                value={form.profile.guardianName}
-              />
-            </div>
+                <div className="rounded-[1.2rem] border border-soft p-5">
+                  <p className="mb-4 text-xs uppercase tracking-[0.2em] text-[var(--accent)] font-semibold">2. Academic Details</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, class: e.target.value}))} placeholder="Class e.g. 8" value={form.class} />
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, section: e.target.value}}))} placeholder="Section" value={form.profile.section} />
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none md:col-span-2" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, schoolName: e.target.value}}))} placeholder="School Name" value={form.profile.schoolName} />
+                    <select className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, board: e.target.value}}))} value={form.profile.board}>
+                      <option value="">Select Board</option>
+                      <option value="CBSE">CBSE</option>
+                      <option value="ICSE">ICSE</option>
+                      <option value="MP Board">MP Board</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, previousPercentage: e.target.value}}))} placeholder="Previous Class Percentage/Grade" value={form.profile.previousPercentage} />
+                  </div>
+                </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <input
-                className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none"
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    profile: {
-                      ...current.profile,
-                      section: event.target.value
-                    }
-                  }))
-                }
-                placeholder="Section"
-                value={form.profile.section}
-              />
-              <input
-                className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none"
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    profile: {
-                      ...current.profile,
-                      admissionNumber: event.target.value
-                    }
-                  }))
-                }
-                placeholder="Admission number"
-                value={form.profile.admissionNumber}
-              />
-            </div>
+                <div className="rounded-[1.2rem] border border-soft p-5">
+                  <p className="mb-4 text-xs uppercase tracking-[0.2em] text-[var(--accent)] font-semibold">3. Tuition Preferences</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none md:col-span-2" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, subjectsToJoin: e.target.value}}))} placeholder="Subjects to Join" value={form.profile.subjectsToJoin} />
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, batchTiming: e.target.value}}))} placeholder="Batch Timing Preference" value={form.profile.batchTiming} />
+                    <select className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, medium: e.target.value}}))} value={form.profile.medium}>
+                      <option value="">Select Medium</option>
+                      <option value="English">English</option>
+                      <option value="Hindi">Hindi</option>
+                    </select>
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none md:col-span-2" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, weakSubjects: e.target.value}}))} placeholder="Weak Subjects" value={form.profile.weakSubjects} />
+                    
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted mb-1 ml-2">Tuition Start Date</span>
+                      <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, tuitionStartDate: e.target.value}}))} type="date" placeholder="Tuition Start Date" value={form.profile.tuitionStartDate} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-[1.2rem] border border-soft p-5">
+                  <p className="mb-4 text-xs uppercase tracking-[0.2em] text-[var(--accent)] font-semibold">4. Parent / Guardian Details</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, fatherName: e.target.value}}))} placeholder="Father's Name" value={form.profile.fatherName} />
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, motherName: e.target.value}}))} placeholder="Mother's Name" value={form.profile.motherName} />
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none md:col-span-2" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, guardianName: e.target.value}}))} placeholder="Guardian Name (if applicable)" value={form.profile.guardianName} />
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, parentMobile: e.target.value}}))} placeholder="Parent/Guardian Mobile Number" value={form.profile.parentMobile} />
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, whatsappNumber: e.target.value}}))} placeholder="WhatsApp Number" value={form.profile.whatsappNumber} />
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none md:col-span-2" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, occupation: e.target.value}}))} placeholder="Occupation (Optional)" value={form.profile.occupation} />
+                  </div>
+                </div>
+
+                <div className="rounded-[1.2rem] border border-soft p-5">
+                  <p className="mb-4 text-xs uppercase tracking-[0.2em] text-[var(--accent)] font-semibold">5. Address</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none md:col-span-2" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, address: e.target.value}}))} placeholder="Complete Address" value={form.profile.address} />
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, city: e.target.value}}))} placeholder="City" value={form.profile.city} />
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, pinCode: e.target.value}}))} placeholder="PIN Code" value={form.profile.pinCode} />
+                  </div>
+                </div>
+
+                <div className="rounded-[1.2rem] border border-soft p-5">
+                  <p className="mb-4 text-xs uppercase tracking-[0.2em] text-[var(--accent)] font-semibold">6. Medical & Office Use</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none md:col-span-2" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, medicalCondition: e.target.value}}))} placeholder="Any Medical Condition/Allergy (Optional)" value={form.profile.medicalCondition} />
+                    
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, admissionNumber: e.target.value}}))} placeholder="Admission No. (Office)" value={form.profile.admissionNumber} />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted mb-1 ml-2">Date of Admission</span>
+                      <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, dateOfAdmission: e.target.value}}))} type="date" value={form.profile.dateOfAdmission} />
+                    </div>
+                    <select className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, feesPlan: e.target.value}}))} value={form.profile.feesPlan}>
+                      <option value="">Select Fees Plan</option>
+                      <option value="Monthly">Monthly</option>
+                      <option value="Half-Yearly">Half-Yearly</option>
+                      <option value="Yearly">Yearly</option>
+                    </select>
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, discount: e.target.value}}))} placeholder="Discount (if any)" value={form.profile.discount} />
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, registrationFee: e.target.value}}))} placeholder="Registration Fee" value={form.profile.registrationFee} />
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, receiptNo: e.target.value}}))} placeholder="Receipt No." value={form.profile.receiptNo} />
+                    <input className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none md:col-span-2" onChange={(e) => setForm(c => ({...c, profile: {...c.profile, customStudentId: e.target.value}}))} placeholder="Student ID (Office)" value={form.profile.customStudentId} />
+                  </div>
+                </div>
+              </div>
+            ) : formRole === "teacher" ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <input
+                  className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none"
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      profile: {
+                        ...current.profile,
+                        phone: event.target.value
+                      }
+                    }))
+                  }
+                  placeholder="Phone number"
+                  value={form.profile.phone}
+                />
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                <input
+                  className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none"
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      profile: {
+                        ...current.profile,
+                        phone: event.target.value
+                      }
+                    }))
+                  }
+                  placeholder="Phone number"
+                  value={form.profile.phone}
+                />
+                <input
+                  className="rounded-[1.2rem] border border-soft bg-surface-strong px-4 py-3 outline-none"
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      profile: {
+                        ...current.profile,
+                        guardianName: event.target.value
+                      }
+                    }))
+                  }
+                  placeholder="Guardian or contact name"
+                  value={form.profile.guardianName}
+                />
+              </div>
+            )}
 
             {formRole === "parent" ? (
               <div className="rounded-[1.2rem] border border-soft p-4">
