@@ -10,7 +10,8 @@ import {
   GraduationCap, 
   Target,
   ShieldCheck,
-  BookOpenCheck
+  BookOpenCheck,
+  Smartphone
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -123,6 +124,15 @@ export default function LandingPage() {
                 >
                   Explore Features
                 </a>
+              </motion.div>
+
+              <motion.div variants={fadeUp} className="mt-6 flex justify-center">
+                <Link 
+                  href="/download"
+                  className="w-full sm:w-auto inline-flex justify-center items-center gap-2 rounded-full bg-surface-strong px-8 py-4 text-base font-semibold text-text-main border-2 border-[var(--primary)]/20 transition-all hover:bg-[var(--primary)]/10 hover:-translate-y-1"
+                >
+                  <Smartphone size={20} className="text-[var(--primary)]" /> Download Our App
+                </Link>
               </motion.div>
             </motion.div>
           </div>
