@@ -79,6 +79,12 @@ export default function LandingPage() {
               </Link>
               <div className="flex items-center gap-4">
                 <Link 
+                  href="/download" 
+                  className="hidden sm:inline-block rounded-full bg-surface border border-soft px-6 py-2.5 text-sm font-semibold text-text-main transition-all hover:bg-surface-hover hover:border-[var(--primary)]/30 hover:-translate-y-0.5"
+                >
+                  Download App
+                </Link>
+                <Link 
                   href="/login" 
                   className="rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-105 shadow-card"
                 >
