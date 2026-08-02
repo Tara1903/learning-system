@@ -17,6 +17,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { routeForRole } from "@/utils/routes";
 import { LoadingPanel } from "@/components/LoadingPanel";
+import { AppPopupModal } from "@/components/AppPopupModal";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -31,20 +32,27 @@ export default function LandingPage() {
   }, [router, status, user]);
 
   if (status === "loading") {
-    return <LoadingPanel label="Loading Adhyayan..." />;
+    return <LoadingPanel label="Checking auth status..." />;
   }
 
   // Animation variants
   const fadeUp: Variants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+    hidden: { opacity: 0, y: reduceMotion ? 0 : 30 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] }
+    }
   };
 
   const staggerContainer: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.15 }
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.1
+      }
     }
   };
 
@@ -52,10 +60,12 @@ export default function LandingPage() {
     <>
       <Head>
         <title>Adhyayan Brilliant Classes - AI Powered Coaching</title>
-        <meta name="description" content="Where Traditional Excellence Meets AI-Powered Learning" />
+        <meta name="description" content="Where traditional excellence meets AI learning." />
       </Head>
 
-      <div className="min-h-screen bg-[var(--background)] text-[var(--text)] overflow-hidden selection:bg-[var(--accent)] selection:text-white">
+      <AppPopupModal />
+
+      <div className="min-h-screen bg-[var(--background)] text-[var(--text)] selection:bg-[var(--accent)] selection:text-white overflow-x-hidden font-sans relative">
         
         {/* Navigation Bar */}
         <nav className="fixed top-0 w-full z-50 backdrop-blur-md bg-[var(--background)]/80 border-b border-[var(--border)]">

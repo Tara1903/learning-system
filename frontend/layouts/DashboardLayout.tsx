@@ -1,7 +1,7 @@
 import type { PropsWithChildren, ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { BrainCircuit, CalendarCheck2, ChartColumnBig, Home, LogOut, Users2 } from "lucide-react";
+import { BrainCircuit, CalendarCheck2, ChartColumnBig, Home, LogOut, Users2, Smartphone } from "lucide-react";
 
 import { MotionReveal } from "@/components/MotionReveal";
 import { NotificationCenter } from "@/components/NotificationCenter";
@@ -117,11 +117,20 @@ export function DashboardLayout({ title, subtitle, actions, children }: Dashboar
           })}
         </nav>
 
-        <div className="mt-auto rounded-[1.5rem] border border-soft bg-surface-strong p-5">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted font-semibold">Premium Platform</p>
-          <p className="mt-2 text-xs leading-5 text-muted">
-            The next generation of AI-powered classroom continuity.
+        <div className="mt-auto rounded-[1.5rem] border border-soft bg-gradient-to-br from-[var(--primary)]/5 to-[var(--accent)]/5 p-5 relative overflow-hidden group">
+          <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Smartphone size={80} />
+          </div>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted font-bold text-[var(--primary)]">Adhyayan App</p>
+          <p className="mt-2 text-xs leading-5 text-muted-text">
+            Experience AI-powered learning on the go with our native Android app.
           </p>
+          <Link
+            href="/download"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-[#0a2e22] hover:-translate-y-0.5 shadow-md shadow-[var(--primary)]/20"
+          >
+            <Smartphone size={14} /> Download Now
+          </Link>
         </div>
       </aside>
 
