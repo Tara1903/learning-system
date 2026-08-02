@@ -45,7 +45,7 @@ export function DashboardLayout({ title, subtitle, actions, children }: Dashboar
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-[1600px] gap-6 px-4 py-4 md:px-6">
+    <div className="mx-auto flex min-h-screen max-w-[1600px] gap-6 px-4 py-4 md:px-6 print:hidden">
       <aside className="app-shell-card hidden w-[280px] shrink-0 rounded-[2rem] p-5 lg:flex lg:flex-col">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-white border border-soft shadow-sm flex items-center justify-center">

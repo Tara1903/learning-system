@@ -16,6 +16,17 @@ export default function AdminFeesPage() {
   
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
 
+  interface ReceiptData {
+    studentName: string;
+    studentClass: string;
+    feeTitle: string;
+    amountPaid: number;
+    paymentMethod: string;
+    receiptNumber: string;
+    date: string;
+  }
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
+
   // New Fee Record Form
   const [feeForm, setFeeForm] = useState({
     student_id: "",
@@ -83,6 +94,19 @@ export default function AdminFeesPage() {
           amount: Number(paymentForm.amount)
         })
       });
+      const selectedRecord = feeRecords.find(r => r.id === recordId);
+      if (selectedRecord) {
+        setReceiptData({
+          studentName: selectedRecord.student?.name || "Unknown",
+          studentClass: selectedRecord.student?.class || "N/A",
+          feeTitle: selectedRecord.title,
+          amountPaid: Number(paymentForm.amount),
+          paymentMethod: paymentForm.payment_method,
+          receiptNumber: paymentForm.receipt_number || "Auto-Generated",
+          date: new Date().toLocaleDateString()
+        });
+      }
+      
       setSuccess("Payment recorded successfully!");
       setPaymentForm({ amount: "", payment_method: "cash", receipt_number: "", notes: "" });
       setSelectedRecordId(null);
@@ -160,6 +184,9 @@ export default function AdminFeesPage() {
                         </div>
                       </div>
 
+                      {success && receiptData && selectedRecordId === null && record.id === receiptData.feeTitle ? null : null}
+                      {/* We will show print button inside the payment form area if they just paid */}
+
                       <div className="flex gap-2 border-t border-soft pt-4">
                         <button 
                           onClick={() => setSelectedRecordId(selectedRecordId === record.id ? null : record.id)}
@@ -217,15 +244,31 @@ export default function AdminFeesPage() {
                                 className="w-full rounded-md border border-soft p-2 text-sm"
                               />
                             </div>
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-2 flex items-center justify-between">
                               <button
                                 type="submit"
                                 disabled={saving}
-                                className="w-full rounded-md bg-[var(--primary)] py-2 text-sm font-medium text-white disabled:opacity-50"
+                                className="rounded-md bg-[var(--primary)] px-6 py-2 text-sm font-medium text-white disabled:opacity-50"
                               >
                                 {saving ? "Processing..." : "Confirm Payment"}
                               </button>
                             </div>
+                            
+                            {receiptData && success && !saving && (
+                              <div className="md:col-span-2 mt-4 p-4 border border-green-200 bg-green-50 rounded-lg flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-semibold text-green-800">Payment Successful</p>
+                                  <p className="text-xs text-green-700 mt-1">The ledger has been updated.</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => window.print()}
+                                  className="rounded-md border border-green-300 bg-white px-4 py-2 text-sm font-medium text-green-700 shadow-sm hover:bg-green-50 flex items-center gap-2"
+                                >
+                                  🖨️ Print Receipt
+                                </button>
+                              </div>
+                            )}
                           </form>
                         </div>
                       )}
@@ -363,6 +406,54 @@ export default function AdminFeesPage() {
           </SectionCard>
         </div>
       </div>
+      
+      {/* Hidden Print Layout */}
+      {receiptData && (
+        <div className="hidden print:block absolute top-0 left-0 w-full bg-white text-black p-8 z-50 min-h-screen">
+          <div className="max-w-2xl mx-auto border-2 border-gray-800 p-8">
+            <div className="text-center mb-8 border-b-2 border-gray-800 pb-6">
+              <img src="/logo.png" alt="Logo" className="h-16 mx-auto mb-4 object-contain" />
+              <h1 className="text-2xl font-bold uppercase tracking-wider text-gray-900">ADHYAYAN BRILLIANT CLASSES</h1>
+              <p className="text-sm text-gray-600 mt-1">Anuradha Nagar, Tejaji Nagar | Call: 9202627229</p>
+            </div>
+            
+            <h2 className="text-xl font-bold text-center underline mb-8 tracking-widest">FEE RECEIPT</h2>
+            
+            <div className="flex justify-between mb-8 text-sm font-medium">
+              <div>
+                <p><span className="text-gray-500 w-24 inline-block">Receipt No:</span> {receiptData.receiptNumber}</p>
+                <p className="mt-2"><span className="text-gray-500 w-24 inline-block">Date:</span> {receiptData.date}</p>
+              </div>
+              <div className="text-right">
+                <p><span className="text-gray-500 mr-2">Payment Method:</span> {receiptData.paymentMethod.toUpperCase()}</p>
+              </div>
+            </div>
+            
+            <div className="bg-gray-50 border border-gray-200 p-6 mb-12">
+              <div className="grid grid-cols-2 gap-y-4 text-sm">
+                <p><span className="text-gray-500 block mb-1">Student Name</span><span className="font-semibold text-lg">{receiptData.studentName}</span></p>
+                <p><span className="text-gray-500 block mb-1">Class</span><span className="font-semibold text-lg">{receiptData.studentClass}</span></p>
+                <p className="col-span-2 mt-4"><span className="text-gray-500 block mb-1">Fee Description</span><span className="font-medium text-base">{receiptData.feeTitle}</span></p>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-end border-t-2 border-gray-800 pt-6">
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Amount Paid</p>
+                <p className="text-3xl font-bold text-gray-900">{formatCurrency(receiptData.amountPaid)}</p>
+              </div>
+              <div className="text-center">
+                <div className="w-48 border-b border-gray-400 mb-2"></div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Authorized Signatory</p>
+              </div>
+            </div>
+            
+            <div className="mt-16 text-center text-xs text-gray-400 italic">
+              Thank you for choosing Adhyayan Brilliant Classes!
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
