@@ -90,7 +90,7 @@ export default function LandingPage() {
         </nav>
 
         {/* Hero Section */}
-        <main className="relative pt-32 pb-16 lg:pt-32 lg:pb-24 overflow-hidden">
+        <main className="relative pt-24 pb-16 lg:pt-28 lg:pb-24 overflow-hidden">
           {/* Decorative Background Elements */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1200px] h-[600px] pointer-events-none -z-10">
             <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--accent)]/10 rounded-full blur-[100px]" />

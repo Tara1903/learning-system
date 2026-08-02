@@ -2,7 +2,6 @@ import type { AppProps } from "next/app";
 import { useEffect } from "react";
 
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
-import { AppBanner } from "@/components/AppBanner";
 import { useThemeStore } from "@/store/theme-store";
 import { useAuthStore } from "@/store/auth-store";
 import { SESSION_EXPIRED_EVENT } from "@/utils/auth-events";
@@ -34,7 +33,6 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <AppErrorBoundary>
-      <AppBanner />
       <Component {...pageProps} />
     </AppErrorBoundary>
   );
