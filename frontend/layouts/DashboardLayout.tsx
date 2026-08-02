@@ -48,12 +48,12 @@ export function DashboardLayout({ title, subtitle, actions, children }: Dashboar
     <div className="mx-auto flex min-h-screen max-w-[1600px] gap-6 px-4 py-4 md:px-6">
       <aside className="app-shell-card hidden w-[280px] shrink-0 rounded-[2rem] p-5 lg:flex lg:flex-col">
         <div className="flex items-center gap-3">
-          <div className="rounded-2xl bg-[rgba(212,175,55,0.16)] p-3 text-[var(--accent)]">
-            <BookOpenCheck size={20} />
+          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-white border border-soft shadow-sm flex items-center justify-center">
+            <img src="/logo.png" alt="Adhyayan Brilliant Classes Logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <p className="heading-serif text-2xl">Adhyayan</p>
-            <p className="text-xs uppercase tracking-[0.25em] text-muted">Learning System</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-muted">Brilliant Classes</p>
           </div>
         </div>
 

@@ -56,7 +56,7 @@ export default function SetupPasswordPage() {
           <p className="text-xs uppercase tracking-[0.28em] text-muted">Account activation</p>
           <h1 className="heading-serif mt-4 text-4xl">Set your password</h1>
           <p className="mt-4 text-sm leading-7 text-muted">
-            Finish your invite setup to activate institutional access to Adhyayan Learning System.
+            Finish your invite setup to activate institutional access to Adhyayan Brilliant Classes.
           </p>
 
           {token ? (
