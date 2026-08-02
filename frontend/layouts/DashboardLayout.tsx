@@ -174,8 +174,8 @@ export function DashboardLayout({ title, subtitle, actions, children }: Dashboar
           </div>
         )}
 
-        {/* Page Content - No padding on mobile for edge-to-edge Native feel */}
-        <main className="flex-1 p-0 md:p-8 pb-[calc(80px+env(safe-area-inset-bottom))] md:pb-8 w-full overflow-x-hidden">
+        {/* Page Content - Add horizontal padding on mobile so content doesn't touch edges */}
+        <main className="flex-1 px-4 py-6 md:p-8 pb-[calc(80px+env(safe-area-inset-bottom))] md:pb-8 w-full overflow-x-hidden">
           <MotionReveal>
             <div className="space-y-6 md:space-y-6">
               {children}

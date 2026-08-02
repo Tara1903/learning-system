@@ -33,12 +33,12 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-6 md:px-8">
-      <div className="mx-auto flex max-w-[1500px] justify-end pb-4">
+    <div className="flex min-h-screen flex-col px-4 py-6 md:px-8">
+      <div className="mx-auto flex w-full max-w-[1500px] justify-end pb-4">
         <ThemeToggle />
       </div>
 
-      <div className="mx-auto flex max-w-md flex-col justify-center pt-8 md:pt-16">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center pb-12">
         <div className="mb-8 text-center">
           <h1 className="font-bold text-2xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] uppercase">
             ADHYAYAN BRILLIANT CLASSES

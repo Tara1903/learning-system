@@ -29,8 +29,8 @@ export default function DownloadPage() {
           Download APK Now
         </a>
         
-        <p className="text-sm text-gray-500 pt-4">
-          *Requires Android 7.0 or higher.
+        <p className="mt-8 text-center text-sm text-muted-text">
+          *Requires Android 13.0 or higher.
         </p>
         
         <div className="pt-6 border-t border-gray-100">

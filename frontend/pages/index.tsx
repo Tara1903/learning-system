@@ -80,7 +80,7 @@ export default function LandingPage() {
         </nav>
 
         {/* Hero Section */}
-        <main className="relative pt-32 pb-16 lg:pt-48 lg:pb-32 overflow-hidden">
+        <main className="relative pt-32 pb-16 lg:pt-32 lg:pb-24 overflow-hidden">
           {/* Decorative Background Elements */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1200px] h-[600px] pointer-events-none -z-10">
             <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--accent)]/10 rounded-full blur-[100px]" />
@@ -139,7 +139,7 @@ export default function LandingPage() {
         </main>
 
         {/* Features Grid */}
-        <section id="features" className="py-24 bg-surface-strong border-y border-soft relative z-10">
+        <section id="features" className="py-16 md:py-24 bg-surface-strong border-y border-soft relative z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="heading-serif text-3xl md:text-5xl font-bold mb-4">Why choose Adhyayan?</h2>
@@ -192,7 +192,7 @@ export default function LandingPage() {
         </section>
 
         {/* The Adhyayan Edge Workflow */}
-        <section className="py-32 relative">
+        <section className="py-16 md:py-24 relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <motion.div 
@@ -251,7 +251,7 @@ export default function LandingPage() {
         </section>
 
         {/* Footer */}
-        <footer className="bg-[var(--primary)] text-white/80 py-16 border-t border-white/10">
+        <footer className="bg-[var(--primary)] text-white/80 py-12 md:py-16 border-t border-white/10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid md:grid-cols-3 gap-12">
               <div>
