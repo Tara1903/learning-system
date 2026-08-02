@@ -14,7 +14,7 @@ import { apiFetch } from "@/utils/api";
 import type { AnalyticsSummary, AttendanceRecord, DoubtThread } from "@/utils/types";
 
 interface StudentDashboardData {
-  student: { name: string; class?: string };
+  student: { name: string; class?: string; profile?: Record<string, any> };
   analytics: AnalyticsSummary;
   attendance: AttendanceRecord[];
   recentDoubts: DoubtThread[];
@@ -120,6 +120,31 @@ export default function StudentDashboardPage() {
                   title="Visual reinforcement for difficult concepts"
                   caption="Use the built-in branded learning surface by default, or plug in a trusted hosted scene later with NEXT_PUBLIC_STUDENT_SCENE_URL."
                 />
+              </div>
+            </SectionCard>
+
+            <SectionCard title="My Profile" eyebrow="Registered Details">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-[1.2rem] border border-soft p-4">
+                  <p className="text-xs text-muted mb-1">School</p>
+                  <p className="font-medium">{dashboard.student.profile?.schoolName || "N/A"}</p>
+                </div>
+                <div className="rounded-[1.2rem] border border-soft p-4">
+                  <p className="text-xs text-muted mb-1">Board & Medium</p>
+                  <p className="font-medium">{dashboard.student.profile?.board || "N/A"} · {dashboard.student.profile?.medium || "N/A"}</p>
+                </div>
+                <div className="rounded-[1.2rem] border border-soft p-4">
+                  <p className="text-xs text-muted mb-1">Batch Timing</p>
+                  <p className="font-medium">{dashboard.student.profile?.batchTiming || "N/A"}</p>
+                </div>
+                <div className="rounded-[1.2rem] border border-soft p-4">
+                  <p className="text-xs text-muted mb-1">Admission No</p>
+                  <p className="font-medium">{dashboard.student.profile?.admissionNumber || "N/A"}</p>
+                </div>
+                <div className="rounded-[1.2rem] border border-soft p-4 md:col-span-2">
+                  <p className="text-xs text-[var(--danger)] mb-1">Weak Subjects Focus</p>
+                  <p className="font-medium">{dashboard.student.profile?.weakSubjects || "None specified"}</p>
+                </div>
               </div>
             </SectionCard>
 

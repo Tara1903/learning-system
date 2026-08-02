@@ -22,6 +22,7 @@ interface PracticeInput {
   studentClass: string;
   analytics: AnalyticsDocument | null;
   recentDoubts: DoubtDocument[];
+  profileWeakSubjects?: string;
 }
 
 export interface PracticeResponsePayload {
@@ -42,13 +43,18 @@ function buildFallbackQuestions(subject: string, topics: string[]) {
 
 export async function generatePracticeSet(input: PracticeInput) {
   const topics = (input.analytics?.weak_topics || input.analytics?.weakTopics || []).map((item: any) => item.topic);
+  
+  if (input.profileWeakSubjects) {
+    topics.push(...input.profileWeakSubjects.split(',').map(s => s.trim()));
+  }
+  
   let questions = buildFallbackQuestions(input.subject, topics);
 
   const prompt = JSON.stringify(
     {
       subject: input.subject,
       studentClass: input.studentClass,
-      weakTopics: topics,
+      weakTopics: Array.from(new Set(topics)),
       recentQuestions: input.recentDoubts.slice(0, 3).map((doubt) => doubt.question)
     },
     null,

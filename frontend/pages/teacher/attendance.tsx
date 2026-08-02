@@ -48,14 +48,32 @@ export default function TeacherAttendancePage() {
     }
   }, [status]);
 
+  const [batchFilter, setBatchFilter] = useState("");
+  const [mediumFilter, setMediumFilter] = useState("");
+  
   const availableClasses = useMemo(
     () => Array.from(new Set(students.map((student) => student.class).filter(Boolean))).sort(),
     [students]
   );
 
+  const availableBatches = useMemo(
+    () => Array.from(new Set(students.map((student) => student.profile?.batchTiming).filter(Boolean))).sort(),
+    [students]
+  );
+
+  const availableMediums = useMemo(
+    () => Array.from(new Set(students.map((student) => student.profile?.medium).filter(Boolean))).sort(),
+    [students]
+  );
+
   const visibleStudents = useMemo(
-    () => (classFilter ? students.filter((student) => student.class === classFilter) : students),
-    [classFilter, students]
+    () => students.filter((student) => {
+      if (classFilter && student.class !== classFilter) return false;
+      if (batchFilter && student.profile?.batchTiming !== batchFilter) return false;
+      if (mediumFilter && student.profile?.medium !== mediumFilter) return false;
+      return true;
+    }),
+    [classFilter, batchFilter, mediumFilter, students]
   );
 
   if (!user || status === "loading" || status === "idle") {
@@ -114,26 +132,58 @@ export default function TeacherAttendancePage() {
               />
             </label>
 
-            <div>
-              <p className="mb-2 text-sm font-medium">Class filter</p>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  className={`rounded-full border px-4 py-2 text-sm ${classFilter === "" ? "border-[var(--accent)] text-[var(--accent)]" : "border-soft"}`}
-                  onClick={() => setClassFilter("")}
-                  type="button"
-                >
-                  All classes
-                </button>
-                {availableClasses.map((className) => (
+            <div className="space-y-4">
+              <div>
+                <p className="mb-2 text-sm font-medium">Class filter</p>
+                <div className="flex flex-wrap gap-3">
                   <button
-                    key={className}
-                    className={`rounded-full border px-4 py-2 text-sm ${classFilter === className ? "border-[var(--accent)] text-[var(--accent)]" : "border-soft"}`}
-                    onClick={() => setClassFilter(className ?? "")}
+                    className={`rounded-full border px-4 py-2 text-sm ${classFilter === "" ? "border-[var(--accent)] text-[var(--accent)]" : "border-soft"}`}
+                    onClick={() => setClassFilter("")}
                     type="button"
                   >
-                    Class {className}
+                    All classes
                   </button>
-                ))}
+                  {availableClasses.map((className) => (
+                    <button
+                      key={className}
+                      className={`rounded-full border px-4 py-2 text-sm ${classFilter === className ? "border-[var(--accent)] text-[var(--accent)]" : "border-soft"}`}
+                      onClick={() => setClassFilter(className ?? "")}
+                      type="button"
+                    >
+                      Class {className}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-sm font-medium">Batch Timing</p>
+                  <select
+                    value={batchFilter}
+                    onChange={(e) => setBatchFilter(e.target.value)}
+                    className="w-full rounded-[1.1rem] border border-soft bg-surface-strong px-4 py-2 text-sm outline-none"
+                  >
+                    <option value="">All Batches</option>
+                    {availableBatches.map(batch => (
+                      <option key={batch as string} value={batch as string}>{batch as string}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <p className="mb-2 text-sm font-medium">Medium</p>
+                  <select
+                    value={mediumFilter}
+                    onChange={(e) => setMediumFilter(e.target.value)}
+                    className="w-full rounded-[1.1rem] border border-soft bg-surface-strong px-4 py-2 text-sm outline-none"
+                  >
+                    <option value="">All Mediums</option>
+                    {availableMediums.map(medium => (
+                      <option key={medium as string} value={medium as string}>{medium as string}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>

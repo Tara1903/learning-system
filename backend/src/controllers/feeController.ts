@@ -9,7 +9,7 @@ export async function getFees(req: Request, res: Response) {
     .from("fee_records")
     .select(`
       *,
-      student:student_id(name, class),
+      student:student_id(name, class, profile),
       transactions:fee_transactions(*)
     `)
     .order('dueDate', { ascending: false });

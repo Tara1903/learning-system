@@ -40,7 +40,7 @@ export async function getParentDashboard(req: Request, res: Response): Promise<v
     .filter((item): item is string => Boolean(item));
 
   const analyticsMap = await getStudentsAnalytics(linkedIds);
-  const { data: students } = await supabase.from("users").select("id, name, class").in("id", linkedIds);
+  const { data: students } = await supabase.from("users").select("id, name, class, profile").in("id", linkedIds);
   const studentMap = new Map((students || []).map((s) => [String(s.id), s]));
 
   const studentSummaries = await Promise.all(
@@ -51,6 +51,7 @@ export async function getParentDashboard(req: Request, res: Response): Promise<v
         id: studentId,
         name: student?.name ?? "Student",
         class: student?.class,
+        profile: student?.profile,
         analytics,
         recommendations: await generateParentRecommendations(analytics)
       };

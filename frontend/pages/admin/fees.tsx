@@ -238,7 +238,7 @@ export default function AdminFeesPage() {
         </div>
 
         {/* Right Column: Generate New Fee */}
-        <div>
+        <div className="space-y-6">
           <SectionCard title="Generate New Due">
             <form onSubmit={handleCreateFee} className="space-y-4">
               <div>
@@ -246,7 +246,18 @@ export default function AdminFeesPage() {
                 <select
                   required
                   value={feeForm.student_id}
-                  onChange={(e) => setFeeForm({ ...feeForm, student_id: e.target.value })}
+                  onChange={(e) => {
+                    const studentId = e.target.value;
+                    const student = students.find(s => s.id === studentId);
+                    const feePlan = student?.profile?.feesPlan;
+                    const defaultAmount = feePlan === "Yearly" ? "50000" : feePlan === "Half-Yearly" ? "25000" : feePlan === "Monthly" ? "5000" : "";
+                    
+                    setFeeForm({ 
+                      ...feeForm, 
+                      student_id: studentId,
+                      amount_due: defaultAmount
+                    });
+                  }}
                   className="w-full rounded-md border border-soft p-2"
                 >
                   <option value="">Select a student...</option>
@@ -255,6 +266,21 @@ export default function AdminFeesPage() {
                   ))}
                 </select>
               </div>
+
+              {feeForm.student_id && (() => {
+                const selectedStudent = students.find(s => s.id === feeForm.student_id);
+                return selectedStudent ? (
+                  <div className="rounded-md bg-surface-strong p-3 text-sm">
+                    <p className="font-semibold mb-1">Billing Profile</p>
+                    <div className="grid grid-cols-2 gap-2 text-text-main">
+                      <p><span className="text-muted">Fees Plan:</span> {selectedStudent.profile?.feesPlan || "Not set"}</p>
+                      <p><span className="text-muted">Discount:</span> {selectedStudent.profile?.discount || "None"}</p>
+                      <p><span className="text-muted">Reg Fee:</span> {selectedStudent.profile?.registrationFee || "None"}</p>
+                      <p><span className="text-muted">Receipt No:</span> {selectedStudent.profile?.receiptNo || "None"}</p>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-text-main">Title / Description</label>

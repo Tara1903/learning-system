@@ -103,7 +103,8 @@ export async function generateStudentPractice(req: Request, res: Response): Prom
     subject,
     studentClass: student.class ?? "12",
     analytics: analytics || {},
-    recentDoubts: recentDoubts || []
+    recentDoubts: recentDoubts || [],
+    profileWeakSubjects: student.profile?.weakSubjects
   });
 
   await settleNonCriticalTasks(
