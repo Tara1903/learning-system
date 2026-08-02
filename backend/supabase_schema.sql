@@ -45,9 +45,9 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_role_class_name ON users(role, class, name);
-CREATE INDEX idx_users_"linkedStudentIds" ON users USING GIN("linkedStudentIds");
+CREATE INDEX idx_users_linkedStudentIds ON users USING GIN("linkedStudentIds");
 
-CREATE TRIGGER update_users_"updatedAt"
+CREATE TRIGGER update_users_updatedAt
 BEFORE UPDATE ON users
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
@@ -64,7 +64,7 @@ CREATE TABLE analytics (
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TRIGGER update_analytics_"updatedAt"
+CREATE TRIGGER update_analytics_updatedAt
 BEFORE UPDATE ON analytics
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
@@ -81,7 +81,7 @@ CREATE TABLE attendance (
     UNIQUE("studentId", date)
 );
 
-CREATE TRIGGER update_attendance_"updatedAt"
+CREATE TRIGGER update_attendance_updatedAt
 BEFORE UPDATE ON attendance
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
@@ -102,13 +102,13 @@ CREATE TABLE audit_logs (
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_audit_logs_"actorId" ON audit_logs("actorId");
+CREATE INDEX idx_audit_logs_actorId ON audit_logs("actorId");
 CREATE INDEX idx_audit_logs_action ON audit_logs(action);
-CREATE INDEX idx_audit_logs_"entityType" ON audit_logs("entityType");
-CREATE INDEX idx_audit_logs_"targetUserId" ON audit_logs("targetUserId");
-CREATE INDEX idx_audit_logs_"createdAt" ON audit_logs("createdAt" DESC);
+CREATE INDEX idx_audit_logs_entityType ON audit_logs("entityType");
+CREATE INDEX idx_audit_logs_targetUserId ON audit_logs("targetUserId");
+CREATE INDEX idx_audit_logs_createdAt ON audit_logs("createdAt" DESC);
 
-CREATE TRIGGER update_audit_logs_"updatedAt"
+CREATE TRIGGER update_audit_logs_updatedAt
 BEFORE UPDATE ON audit_logs
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
@@ -125,11 +125,11 @@ CREATE TABLE auth_tokens (
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_auth_tokens_"userId" ON auth_tokens("userId");
+CREATE INDEX idx_auth_tokens_userId ON auth_tokens("userId");
 CREATE INDEX idx_auth_tokens_type ON auth_tokens(type);
-CREATE INDEX idx_auth_tokens_"expiresAt" ON auth_tokens("expiresAt");
+CREATE INDEX idx_auth_tokens_expiresAt ON auth_tokens("expiresAt");
 
-CREATE TRIGGER update_auth_tokens_"updatedAt"
+CREATE TRIGGER update_auth_tokens_updatedAt
 BEFORE UPDATE ON auth_tokens
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
@@ -151,10 +151,10 @@ CREATE TABLE upload_assets (
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_upload_assets_"ownerId"_"createdAt" ON upload_assets("ownerId", "createdAt" DESC);
+CREATE INDEX idx_upload_assets_ownerId_createdAt ON upload_assets("ownerId", "createdAt" DESC);
 CREATE INDEX idx_upload_assets_category ON upload_assets(category);
 
-CREATE TRIGGER update_upload_assets_"updatedAt"
+CREATE TRIGGER update_upload_assets_updatedAt
 BEFORE UPDATE ON upload_assets
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
@@ -176,9 +176,9 @@ CREATE TABLE doubts (
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_doubts_"studentId"_"updatedAt" ON doubts("studentId", "updatedAt" DESC);
+CREATE INDEX idx_doubts_studentId_updatedAt ON doubts("studentId", "updatedAt" DESC);
 
-CREATE TRIGGER update_doubts_"updatedAt"
+CREATE TRIGGER update_doubts_updatedAt
 BEFORE UPDATE ON doubts
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
@@ -198,7 +198,7 @@ CREATE TABLE notifications (
 
 CREATE INDEX idx_notifications_recipient_read_created ON notifications("recipientId", read, "createdAt" DESC);
 
-CREATE TRIGGER update_notifications_"updatedAt"
+CREATE TRIGGER update_notifications_updatedAt
 BEFORE UPDATE ON notifications
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
@@ -218,9 +218,9 @@ CREATE TABLE practice_sets (
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_practice_sets_"studentId"_"updatedAt" ON practice_sets("studentId", "updatedAt" DESC);
+CREATE INDEX idx_practice_sets_studentId_updatedAt ON practice_sets("studentId", "updatedAt" DESC);
 
-CREATE TRIGGER update_practice_sets_"updatedAt"
+CREATE TRIGGER update_practice_sets_updatedAt
 BEFORE UPDATE ON practice_sets
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 -- 10. Schedules Table
@@ -236,9 +236,9 @@ CREATE TABLE schedules (
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_schedules_class_"startTime" ON schedules(class, "startTime");
+CREATE INDEX idx_schedules_class_startTime ON schedules(class, "startTime");
 
-CREATE TRIGGER update_schedules_"updatedAt"
+CREATE TRIGGER update_schedules_updatedAt
 BEFORE UPDATE ON schedules
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
@@ -255,9 +255,9 @@ CREATE TABLE fee_records (
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_fee_records_"studentId"_"dueDate" ON fee_records("studentId", "dueDate" DESC);
+CREATE INDEX idx_fee_records_studentId_dueDate ON fee_records("studentId", "dueDate" DESC);
 
-CREATE TRIGGER update_fee_records_"updatedAt"
+CREATE TRIGGER update_fee_records_updatedAt
 BEFORE UPDATE ON fee_records
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
@@ -275,15 +275,15 @@ CREATE TABLE fee_transactions (
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_fee_transactions_"feeRecordId" ON fee_transactions("feeRecordId");
+CREATE INDEX idx_fee_transactions_feeRecordId ON fee_transactions("feeRecordId");
 
-CREATE TRIGGER update_fee_transactions_"updatedAt"
+CREATE TRIGGER update_fee_transactions_updatedAt
 BEFORE UPDATE ON fee_transactions
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 -- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_attendance_"studentId" ON attendance("studentId");
-CREATE INDEX IF NOT EXISTS idx_analytics_"studentId" ON analytics("studentId");
-CREATE INDEX IF NOT EXISTS idx_doubts_"resolvedAt" ON doubts("resolvedAt");
+CREATE INDEX IF NOT EXISTS idx_attendance_studentId ON attendance("studentId");
+CREATE INDEX IF NOT EXISTS idx_analytics_studentId ON analytics("studentId");
+CREATE INDEX IF NOT EXISTS idx_doubts_resolvedAt ON doubts("resolvedAt");
 
 -- 10. RPCs for Analytics Aggregation
 CREATE OR REPLACE FUNCTION get_institute_analytics()
