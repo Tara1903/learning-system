@@ -190,8 +190,8 @@ CREATE TABLE notifications (
     title TEXT NOT NULL,
     message TEXT NOT NULL,
     read BOOLEAN DEFAULT false,
-    related_"entityType" TEXT,
-    related_"entityId" UUID,
+    "relatedEntityType" TEXT,
+    "relatedEntityId" UUID,
     "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -292,7 +292,7 @@ DECLARE
     role_counts JSON;
     avg_attendance REAL;
     at_risk_students INTEGER;
-    top_"weakTopics" JSON;
+    top_weakTopics JSON;
     attendance_count BIGINT;
     "doubtCount" BIGINT;
 BEGIN
@@ -306,7 +306,7 @@ BEGIN
     FROM analytics
     WHERE "attendancePercentage" < 75 OR ("practiceAccuracy" > 0 AND "practiceAccuracy" < 60);
 
-    SELECT json_agg(row_to_json(t)) INTO top_"weakTopics"
+    SELECT json_agg(row_to_json(t)) INTO top_weakTopics
     FROM (
         SELECT topic_val->>'topic' as topic, SUM((topic_val->>'confidence')::numeric) as score
         FROM analytics, jsonb_array_elements("weakTopics") as topic_val
@@ -322,7 +322,7 @@ BEGIN
         'roleCounts', COALESCE(role_counts, '{}'::json),
         'averageAttendance', avg_attendance,
         'atRiskStudents', at_risk_students,
-        'topWeakTopics', COALESCE(top_"weakTopics", '[]'::json),
+        'topWeakTopics', COALESCE(top_weakTopics, '[]'::json),
         'attendanceCount', attendance_count,
         'doubtCount', "doubtCount"
     );
