@@ -207,7 +207,7 @@ export const env = {
   enableAiVoiceDoubts: effectiveEnableAiVoiceDoubts,
   uploadFeaturesAutoDisabledOnVercel,
   uploadStorageDriver,
-  uploadDir: path.resolve(rootDir, process.env.UPLOAD_DIR ?? "uploads"),
+  uploadDir: Boolean(vercelEnvironment || process.env.VERCEL) ? "/tmp/uploads" : path.resolve(rootDir, process.env.UPLOAD_DIR ?? "uploads"),
   enableUploadMalwareScanHook: parseBoolean(process.env.ENABLE_UPLOAD_MALWARE_SCAN_HOOK, false),
   uploadMalwareScanEndpoint: process.env.UPLOAD_MALWARE_SCAN_ENDPOINT ?? "",
   s3Endpoint: process.env.S3_ENDPOINT ?? "",
