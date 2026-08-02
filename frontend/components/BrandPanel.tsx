@@ -18,7 +18,7 @@ export function BrandPanel() {
         animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <p className="text-xs uppercase tracking-[0.4em] text-white/65">Adhyayan Brilliant Classes</p>
+        <p className="text-xs uppercase tracking-[0.4em] text-white/65">ADHYAYAN BRILLIANT CLASSES</p>
         <h1 className="heading-serif mt-4 text-4xl leading-tight md:text-5xl">
           Premium digital infrastructure for modern coaching institutes.
         </h1>

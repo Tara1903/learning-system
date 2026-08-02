@@ -412,7 +412,6 @@ export default function AdminFeesPage() {
         <div className="hidden print:block absolute top-0 left-0 w-full bg-white text-black p-8 z-50 min-h-screen">
           <div className="max-w-2xl mx-auto border-2 border-gray-800 p-8">
             <div className="text-center mb-8 border-b-2 border-gray-800 pb-6">
-              <img src="/logo.png" alt="Logo" className="h-16 mx-auto mb-4 object-contain" />
               <h1 className="text-2xl font-bold uppercase tracking-wider text-gray-900">ADHYAYAN BRILLIANT CLASSES</h1>
               <p className="text-sm text-gray-600 mt-1">Anuradha Nagar, Tejaji Nagar | Call: 9202627229</p>
             </div>

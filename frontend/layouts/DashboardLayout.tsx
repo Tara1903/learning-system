@@ -76,12 +76,12 @@ export function DashboardLayout({ title, subtitle, actions, children }: Dashboar
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-[280px] shrink-0 border-r border-soft bg-surface/50 backdrop-blur-xl z-20 print:hidden p-6 sticky top-0 h-screen">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-white border border-soft shadow-sm flex items-center justify-center p-1">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-[var(--primary)] text-white border border-[var(--primary)]/20 shadow-sm flex items-center justify-center">
+            <span className="font-bold text-2xl heading-serif">A</span>
           </div>
           <div>
-            <p className="heading-serif text-xl font-bold">Adhyayan</p>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-muted">Brilliant Classes</p>
+            <p className="font-bold text-[17px] tracking-wider text-[var(--text)] uppercase">Adhyayan</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-muted font-medium">Brilliant Classes</p>
           </div>
         </div>
 

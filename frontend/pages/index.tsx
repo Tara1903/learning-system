@@ -60,10 +60,12 @@ export default function LandingPage() {
         <nav className="fixed top-0 w-full z-50 backdrop-blur-md bg-[var(--background)]/80 border-b border-[var(--border)]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-20">
-              <div className="flex items-center gap-3">
-                <img src="/logo.png" alt="Adhyayan Brilliant Classes Logo" className="h-10 w-auto rounded-md object-contain" />
-                <span className="font-bold text-lg tracking-wide hidden sm:block">ADHYAYAN</span>
-              </div>
+              <Link href="/" className="flex items-center">
+                <span className="font-bold text-xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] uppercase">
+                  <span className="hidden sm:inline">ADHYAYAN BRILLIANT CLASSES</span>
+                  <span className="sm:hidden">ADHYAYAN</span>
+                </span>
+              </Link>
               <div className="flex items-center gap-4">
                 <Link 
                   href="/login" 
@@ -244,10 +246,9 @@ export default function LandingPage() {
             <div className="grid md:grid-cols-3 gap-12">
               <div>
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="bg-white p-2 rounded-xl">
-                    <img src="/logo.png" alt="Logo" className="h-8 w-auto object-contain" />
-                  </div>
-                  <span className="font-bold text-lg text-white">ADHYAYAN</span>
+                  <span className="font-bold text-xl tracking-widest text-white uppercase">
+                    ADHYAYAN BRILLIANT CLASSES
+                  </span>
                 </div>
                 <p className="text-sm max-w-xs leading-relaxed">
                   Premium digital infrastructure for modern coaching institutes. Bridging the gap between classroom and home.
