@@ -250,12 +250,44 @@ export default function AdminFeesPage() {
                     const studentId = e.target.value;
                     const student = students.find(s => s.id === studentId);
                     const feePlan = student?.profile?.feesPlan;
-                    const defaultAmount = feePlan === "Yearly" ? "50000" : feePlan === "Half-Yearly" ? "25000" : feePlan === "Monthly" ? "5000" : "";
+                    
+                    let calculatedAmount = 0;
+                    if (student && student.class) {
+                      const BASE_FEE_MAP: Record<number, number> = {
+                        1: 1100, 2: 1200, 3: 1300, 4: 1400, 5: 1500, 
+                        6: 1600, 7: 1700, 8: 1800, 9: 1900, 10: 2000
+                      };
+                      
+                      const studentClassNum = parseInt(student.class.replace(/\\D/g, '') || "0", 10);
+                      const baseMonthlyFee = BASE_FEE_MAP[studentClassNum] || 0;
+                      
+                      let siblingDiscount = 0;
+                      if (student.profile?.parentMobile) {
+                        const hasOlderSibling = students.some(s => 
+                          s.id !== student.id && 
+                          s.profile?.parentMobile === student.profile?.parentMobile && 
+                          parseInt(s.class?.replace(/\\D/g, '') || "0", 10) > studentClassNum
+                        );
+                        if (hasOlderSibling) {
+                          siblingDiscount = 200;
+                        }
+                      }
+                      
+                      const adjustedMonthlyFee = Math.max(0, baseMonthlyFee - siblingDiscount);
+                      
+                      if (feePlan === "Yearly") {
+                        calculatedAmount = adjustedMonthlyFee * 12 * 0.8;
+                      } else if (feePlan === "Half-Yearly") {
+                        calculatedAmount = adjustedMonthlyFee * 6 * 0.9;
+                      } else if (feePlan === "Monthly") {
+                        calculatedAmount = adjustedMonthlyFee * 1;
+                      }
+                    }
                     
                     setFeeForm({ 
                       ...feeForm, 
                       student_id: studentId,
-                      amount_due: defaultAmount
+                      amount_due: calculatedAmount ? calculatedAmount.toString() : ""
                     });
                   }}
                   className="w-full rounded-md border border-soft p-2"
