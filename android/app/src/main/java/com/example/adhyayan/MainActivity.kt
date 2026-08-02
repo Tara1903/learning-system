@@ -27,6 +27,7 @@ sealed class Screen {
     object Auth : Screen()
     object Dashboard : Screen()
     object AdminDashboard : Screen()
+    object AdminCreateUser : Screen()
     object AiTutor : Screen()
     data class CourseViewer(val courseId: String) : Screen()
     object Analytics : Screen()
@@ -57,8 +58,20 @@ class MainActivity : ComponentActivity() {
             }
             is Screen.AdminDashboard -> {
                 com.example.adhyayan.feature.dashboard.ui.AdminDashboardScreen(
+                    onNavigateToCreateUser = {
+                        currentScreen = Screen.AdminCreateUser
+                    },
                     onLogout = {
                         currentScreen = Screen.Auth
+                    }
+                )
+            }
+            is Screen.AdminCreateUser -> {
+                val adminViewModel: com.example.adhyayan.feature.dashboard.ui.AdminViewModel = hiltViewModel()
+                com.example.adhyayan.feature.dashboard.ui.AdminCreateUserScreen(
+                    viewModel = adminViewModel,
+                    onNavigateBack = {
+                        currentScreen = Screen.AdminDashboard
                     }
                 )
             }
