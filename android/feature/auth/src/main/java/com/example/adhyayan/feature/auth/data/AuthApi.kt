@@ -8,7 +8,7 @@ import retrofit2.http.POST
 data class LoginRequest(val email: String, val passwordHash: String)
 
 @Serializable
-data class LoginResponse(val token: String, val userId: String, val name: String)
+data class LoginResponse(val token: String, val userId: String, val name: String, val role: String = "student")
 
 interface AuthApi {
     @POST("auth/login")

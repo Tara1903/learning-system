@@ -13,7 +13,7 @@ import javax.inject.Inject
 sealed interface AuthUiState {
     object Idle : AuthUiState
     object Loading : AuthUiState
-    object Success : AuthUiState
+    data class Success(val role: String) : AuthUiState
     data class Error(val message: String) : AuthUiState
 }
 
@@ -30,8 +30,8 @@ class AuthViewModel @Inject constructor(
             _uiState.value = AuthUiState.Loading
             val result = authRepository.login(email, passwordHash)
             result.fold(
-                onSuccess = {
-                    _uiState.value = AuthUiState.Success
+                onSuccess = { role ->
+                    _uiState.value = AuthUiState.Success(role)
                 },
                 onFailure = {
                     _uiState.value = AuthUiState.Error(it.message ?: "An unknown error occurred")

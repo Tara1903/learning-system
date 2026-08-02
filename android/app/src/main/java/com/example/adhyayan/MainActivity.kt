@@ -26,6 +26,7 @@ import com.example.adhyayan.feature.analytics.ui.AnalyticsViewModel
 sealed class Screen {
     object Auth : Screen()
     object Dashboard : Screen()
+    object AdminDashboard : Screen()
     object AiTutor : Screen()
     data class CourseViewer(val courseId: String) : Screen()
     object Analytics : Screen()
@@ -45,8 +46,19 @@ class MainActivity : ComponentActivity() {
                 val authViewModel: AuthViewModel = hiltViewModel()
                 AuthScreen(
                     viewModel = authViewModel,
-                    onNavigateToDashboard = {
-                        currentScreen = Screen.Dashboard
+                    onLoginSuccess = { role ->
+                        if (role == "admin") {
+                            currentScreen = Screen.AdminDashboard
+                        } else {
+                            currentScreen = Screen.Dashboard
+                        }
+                    }
+                )
+            }
+            is Screen.AdminDashboard -> {
+                com.example.adhyayan.feature.dashboard.ui.AdminDashboardScreen(
+                    onLogout = {
+                        currentScreen = Screen.Auth
                     }
                 )
             }

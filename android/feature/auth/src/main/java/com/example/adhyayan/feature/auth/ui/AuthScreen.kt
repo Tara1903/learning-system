@@ -32,14 +32,15 @@ import com.example.adhyayan.core.designsystem.theme.adhyayanGlow
 @Composable
 fun AuthScreen(
     viewModel: AuthViewModel,
-    onNavigateToDashboard: () -> Unit
+    onLoginSuccess: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
     if (uiState is AuthUiState.Success) {
-        onNavigateToDashboard()
+        val role = (uiState as AuthUiState.Success).role
+        onLoginSuccess(role)
     }
 
     Box(
