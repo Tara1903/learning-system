@@ -12,15 +12,15 @@ export async function getFees(req: Request, res: Response) {
       student:student_id(name, class),
       transactions:fee_transactions(*)
     `)
-    .order("due_date", { ascending: false });
+    .order('dueDate', { ascending: false });
 
   if (user?.role === "parent") {
     if (!user.linked_student_id) {
       return res.json({ feeRecords: [] });
     }
-    query = query.eq("student_id", user.linked_student_id);
+    query = query.eq('studentId', user.linked_student_id);
   } else if (user?.role === "student") {
-    query = query.eq("student_id", user.id);
+    query = query.eq('studentId', user.id);
   }
 
   const { data, error } = await query;

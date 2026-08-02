@@ -83,7 +83,7 @@ export async function askDoubt(req: Request, res: Response): Promise<void> {
 
   let thread: any = null;
   if (threadId) {
-    const { data } = await supabase.from('doubts').select('*').eq('id', threadId).eq('student_id', studentId).single();
+    const { data } = await supabase.from('doubts').select('*').eq('id', threadId).eq('studentId', studentId).single();
     thread = data;
   }
   const previousMessages =

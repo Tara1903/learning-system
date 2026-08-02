@@ -151,8 +151,8 @@ export async function listPracticeSetsForStudent(studentId: string) {
   const { data } = await supabase
     .from('practice_sets')
     .select('*')
-    .eq('student_id', studentId)
-    .order('updated_at', { ascending: false });
+    .eq('studentId', studentId)
+    .order('updatedAt', { ascending: false });
   return data || [];
 }
 
@@ -167,7 +167,7 @@ export async function submitPracticeResponses(input: {
     .from('practice_sets')
     .select('*')
     .eq('id', input.practiceSetId)
-    .eq('student_id', input.studentId)
+    .eq('studentId', input.studentId)
     .single();
 
   if (!practiceSet) {

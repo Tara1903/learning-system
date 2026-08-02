@@ -11,7 +11,7 @@ export async function getSchedules(req: Request, res: Response) {
       *,
       teacher:teacher_id(name)
     `)
-    .order("start_time", { ascending: true });
+    .order('startTime', { ascending: true });
 
   if (user?.role === "student" && user.class) {
     query = query.eq("class", user.class);
@@ -30,10 +30,10 @@ export async function getSchedules(req: Request, res: Response) {
 
   // Filter by date range if provided
   if (req.query.startDate) {
-    query = query.gte("start_time", req.query.startDate as string);
+    query = query.gte('startTime', req.query.startDate as string);
   }
   if (req.query.endDate) {
-    query = query.lte("end_time", req.query.endDate as string);
+    query = query.lte('endTime', req.query.endDate as string);
   }
 
   const { data, error } = await query;

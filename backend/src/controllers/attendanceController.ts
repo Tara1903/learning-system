@@ -145,7 +145,7 @@ export async function getAttendanceByStudent(req: Request, res: Response): Promi
     await assertParentAccess(req.user.id, studentId);
   }
 
-  const { data: records = [] } = await supabase.from('attendance').select('*').eq('student_id', studentId).order('date', { ascending: false });
+  const { data: records = [] } = await supabase.from('attendance').select('*').eq('studentId', studentId).order('date', { ascending: false });
   const percentage = calculateAttendancePercentage(records as any);
 
   await settleNonCriticalTasks("attendance-view-audit", [

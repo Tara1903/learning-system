@@ -36,9 +36,9 @@ export async function recalculateStudentAnalytics(studentId: string) {
     { data: doubts = [] },
     { data: practiceSets = [] }
   ] = await Promise.all([
-    supabase.from('attendance').select('*').eq('student_id', studentId),
-    supabase.from('doubts').select('*').eq('student_id', studentId),
-    supabase.from('practice_sets').select('*').eq('student_id', studentId)
+    supabase.from('attendance').select('*').eq('studentId', studentId),
+    supabase.from('doubts').select('*').eq('studentId', studentId),
+    supabase.from('practice_sets').select('*').eq('studentId', studentId)
   ]);
 
   const totalAttendance = (attendance || []).length;
@@ -62,9 +62,9 @@ export async function recalculateStudentAnalytics(studentId: string) {
     : 0;
 
   const timestamps = [
-    ...(attendance || []).map((entry: any) => new Date(entry.updated_at || entry.createdAt || 0).getTime()),
-    ...(doubts || []).map((entry: any) => new Date(entry.updated_at || entry.createdAt || 0).getTime()),
-    ...(practiceSets || []).map((entry: any) => new Date(entry.updated_at || entry.createdAt || 0).getTime())
+    ...(attendance || []).map((entry: any) => new Date(entry.updatedAt || entry.createdAt || 0).getTime()),
+    ...(doubts || []).map((entry: any) => new Date(entry.updatedAt || entry.createdAt || 0).getTime()),
+    ...(practiceSets || []).map((entry: any) => new Date(entry.updatedAt || entry.createdAt || 0).getTime())
   ].filter(t => !isNaN(t) && t > 0);
 
   const lastActivityAt = timestamps.length ? new Date(Math.max(...timestamps)).toISOString() : undefined;
@@ -72,13 +72,13 @@ export async function recalculateStudentAnalytics(studentId: string) {
   const { data: analytics, error } = await supabase
     .from('analytics')
     .upsert({
-      student_id: studentId,
-      weak_topics: weakTopics,
-      doubt_count: doubtCount,
-      attendance_percentage: attendancePercentage,
-      practice_accuracy: practiceAccuracy,
-      last_activity_at: lastActivityAt
-    }, { onConflict: 'student_id' })
+      studentId: studentId,
+      weakTopics: weakTopics,
+      doubtCount: doubtCount,
+      attendancePercentage: attendancePercentage,
+      practiceAccuracy: practiceAccuracy,
+      lastActivityAt: lastActivityAt
+    }, { onConflict: 'studentId' })
     .select()
     .single();
 
@@ -87,15 +87,15 @@ export async function recalculateStudentAnalytics(studentId: string) {
 }
 
 export async function getStudentAnalytics(studentId: string) {
-  const { data } = await supabase.from('analytics').select('*').eq('student_id', studentId).single();
+  const { data } = await supabase.from('analytics').select('*').eq('studentId', studentId).single();
   return data ?? recalculateStudentAnalytics(studentId);
 }
 
 export async function getStudentsAnalytics(studentIds: string[]) {
   if (!studentIds.length) return new Map();
-  const { data } = await supabase.from('analytics').select('*').in('student_id', studentIds);
+  const { data } = await supabase.from('analytics').select('*').in('studentId', studentIds);
   
-  const analyticsMap = new Map((data || []).map((a: any) => [a.student_id, a]));
+  const analyticsMap = new Map((data || []).map((a: any) => [a.studentId, a]));
   
   const missingIds = studentIds.filter(id => !analyticsMap.has(id));
   if (missingIds.length > 0) {
