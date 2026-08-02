@@ -20,15 +20,15 @@ export function validateRequest(config: ValidationConfig) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       if (config.params) {
-        req.params = config.params.parse(req.params) as any;
+        Object.defineProperty(req, "params", { value: config.params.parse(req.params), writable: true, configurable: true, enumerable: true });
       }
 
       if (config.query) {
-        req.query = config.query.parse(req.query) as any;
+        Object.defineProperty(req, "query", { value: config.query.parse(req.query), writable: true, configurable: true, enumerable: true });
       }
 
       if (config.body) {
-        req.body = config.body.parse(req.body);
+        Object.defineProperty(req, "body", { value: config.body.parse(req.body), writable: true, configurable: true, enumerable: true });
       }
 
       next();
